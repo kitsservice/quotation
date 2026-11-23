@@ -6,7 +6,8 @@ import {
   Trash2, 
   X,
   Copy,
-  Boxes
+  Boxes,
+  ArrowLeft
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
 import { COMMON_HSN_CODES } from '../utils/gstHelper';
@@ -29,7 +30,8 @@ function ProductsManager({
   products = [],
   searchQuery = '',
   onSaveProduct,
-  onDeleteProduct
+  onDeleteProduct,
+  onNavigateTab
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
@@ -118,13 +120,25 @@ function ProductsManager({
       
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Item & Service Catalog
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Maintain pre-configured standard robotic arms, PLC panels, vision cameras, and engineering mandays.
-          </p>
+        <div className="flex items-center space-x-3.5">
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab('dashboard')}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Item & Service Catalog
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Maintain pre-configured standard robotic arms, PLC panels, vision cameras, and engineering mandays.
+            </p>
+          </div>
         </div>
         <button
           onClick={handleOpenAdd}

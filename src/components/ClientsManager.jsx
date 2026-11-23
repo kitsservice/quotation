@@ -15,7 +15,8 @@ import {
   FileCheck2,
   Receipt,
   Truck,
-  Eye
+  Eye,
+  ArrowLeft
 } from 'lucide-react';
 import { getStateFromGstin } from '../utils/gstHelper';
 import { formatCurrency, formatDate } from '../utils/formatters';
@@ -88,7 +89,8 @@ function ClientsManager({
   searchQuery = '',
   onSaveClient,
   onDeleteClient,
-  onViewQuotation
+  onViewQuotation,
+  onNavigateTab
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activityFilter, setActivityFilter] = useState('All Customers');
@@ -349,11 +351,23 @@ function ClientsManager({
       
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Customers Management</h1>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Directory of clients auto-synced with Commercial Quotations, Proforma, Final Invoices, and Delivery Challans.
-          </p>
+        <div className="flex items-center space-x-3">
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab('dashboard')}
+              className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200/80 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Customers Management</h1>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
+              Directory of clients auto-synced with Commercial Quotations, Proforma, Final Invoices, and Delivery Challans.
+            </p>
+          </div>
         </div>
 
         <button

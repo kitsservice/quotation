@@ -136,7 +136,7 @@ function DeliveryChallanManager({
   initialMode = 'list',
   onSaveChallan,
   onDeleteChallan,
-  onNavigateTab: _onNavigateTab,
+  onNavigateTab,
   onViewQuotation
 }) {
   const [viewMode, setViewMode] = useState(initialMode || 'list'); // 'list' | 'create' | 'preview'
@@ -472,6 +472,16 @@ function DeliveryChallanManager({
           {/* Header & Metrics Strip */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
             <div className="flex items-center space-x-3.5">
+              {onNavigateTab && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('dashboard')}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+                  title="Back to Dashboard"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              )}
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
                 <Truck className="w-6 h-6" />
               </div>
@@ -738,7 +748,7 @@ function DeliveryChallanManager({
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setViewMode('list')}
-                className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -1346,7 +1356,7 @@ function DeliveryChallanManager({
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setViewMode('list')}
-                className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>

@@ -10,7 +10,8 @@ import {
   Download,
   FileSpreadsheet,
   FileCheck2,
-  ChevronDown
+  ChevronDown,
+  ArrowLeft
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
@@ -31,7 +32,8 @@ function QuotationsList({
   onEditQuotation,
   onDeleteQuotation,
   onShareQuotation,
-  onConvertToProforma
+  onConvertToProforma,
+  onNavigateTab
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -110,11 +112,23 @@ function QuotationsList({
       
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Quotations</h1>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Manage, track revisions, and export official commercial offers
-          </p>
+        <div className="flex items-center space-x-3">
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab('dashboard')}
+              className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200/80 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Quotations</h1>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
+              Manage, track revisions, and export official commercial offers
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-2">

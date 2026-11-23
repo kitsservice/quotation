@@ -497,7 +497,7 @@ function TaxInvoiceEditor({
           <button
             type="button"
             onClick={onCancel}
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200/80 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
             title="Back to Invoices"
           >
             <ArrowLeft className="w-5 h-5" />

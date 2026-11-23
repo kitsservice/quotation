@@ -312,6 +312,8 @@ export default function App() {
   const handleToggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), []);
   const handleOpenSettings = useCallback(() => setShowSettings(true), []);
   const handleCloseSettings = useCallback(() => setShowSettings(false), []);
+  const [_navHistory, setNavHistory] = useState(['dashboard']);
+
   const handleSelectTab = useCallback((tab) => {
     if (tab === 'proforma') {
       setProformaSourceQuote(null);
@@ -323,11 +325,39 @@ export default function App() {
     if (tab === 'challans') {
       setChallanInitialMode('list');
     }
-    setActiveTab(tab);
+    setActiveTab(prev => {
+      if (prev !== tab) {
+        setNavHistory(h => [...h.filter(t => t !== tab), prev]);
+      }
+      return tab;
+    });
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
   }, []);
+
+  const handleGoBack = useCallback(() => {
+    if (activeTab === 'preview' && previewReturnTab) {
+      const target = previewReturnTab;
+      setPreviewReturnTab(null);
+      setActiveTab(target);
+      return;
+    }
+    if (activeTab === 'editor') {
+      setActiveTab('quotes');
+      return;
+    }
+    setNavHistory(prev => {
+      if (prev.length > 0) {
+        const next = [...prev];
+        const target = next.pop() || 'dashboard';
+        setActiveTab(target);
+        return next;
+      }
+      setActiveTab('dashboard');
+      return [];
+    });
+  }, [activeTab, previewReturnTab]);
 
   // Handlers for Quotations & Documents
   const handleNewQuotation = useCallback(() => {
@@ -534,6 +564,7 @@ export default function App() {
           companySettings={companySettings}
           onQuickAction={handleNewQuotation}
           onToggleSidebar={handleToggleSidebar}
+          onBack={activeTab !== 'dashboard' ? handleGoBack : null}
         />
 
         {/* Viewport Router - Screen-fit Scroll Area */}
@@ -570,6 +601,7 @@ export default function App() {
                   onDeleteQuotation={handleDeleteQuotation}
                   onShareQuotation={(q) => setShareQuotation(q)}
                   onConvertToProforma={handleConvertToProforma}
+                  onNavigateTab={handleSelectTab}
                 />
               )}
 
@@ -743,6 +775,7 @@ export default function App() {
                   onSaveClient={handleSaveClient}
                   onDeleteClient={handleDeleteClient}
                   onViewQuotation={handleViewQuotation}
+                  onNavigateTab={handleSelectTab}
                 />
               )}
 
@@ -753,6 +786,7 @@ export default function App() {
                   searchQuery={deferredSearchQuery}
                   onSaveProduct={handleSaveProduct}
                   onDeleteProduct={handleDeleteProduct}
+                  onNavigateTab={handleSelectTab}
                 />
               )}
 
@@ -761,6 +795,7 @@ export default function App() {
                 <ReportsAnalytics
                   quotations={quotations}
                   clients={clients}
+                  onNavigateTab={handleSelectTab}
                 />
               )}
               </Suspense>

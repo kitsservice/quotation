@@ -10,7 +10,8 @@ import {
   Building2,
   CheckCircle2,
   BarChart3,
-  IndianRupee
+  IndianRupee,
+  ArrowLeft
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
@@ -58,7 +59,8 @@ function generateRecentMonthBuckets(count = 6) {
 
 function ReportsAnalytics({
   quotations = [],
-  _clients = []
+  _clients = [],
+  onNavigateTab
 }) {
   const [selectedPeriod, setSelectedPeriod] = useState(DATE_RANGES[3]); // Default: Last 6 Months
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
@@ -405,16 +407,28 @@ function ReportsAnalytics({
       
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center space-x-2.5">
-            <span>Reports & Analytics</span>
-            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Live Data
-            </span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Real-time business performance derived directly from your official commercial documents.
-          </p>
+        <div className="flex items-center space-x-3">
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab('dashboard')}
+              className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200/80 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center space-x-2.5">
+              <span>Reports & Analytics</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Live Data
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
+              Real-time business performance derived directly from your official commercial documents.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-3">

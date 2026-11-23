@@ -284,10 +284,11 @@ function QuotationPreview({
         <div className="flex items-center space-x-3">
           <button
             onClick={onBack}
-            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-            title="Back to List"
+            className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-200/80 shrink-0"
+            title="Back to Previous View"
           >
             <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
           </button>
           <div>
             <div className="flex items-center space-x-2">

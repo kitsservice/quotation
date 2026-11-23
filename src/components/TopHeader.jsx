@@ -5,7 +5,8 @@ import {
   Settings, 
   ExternalLink,
   ChevronDown,
-  Menu
+  Menu,
+  ArrowLeft
 } from 'lucide-react';
 
 const EMPTY_NOTIFICATIONS = [];
@@ -16,7 +17,8 @@ function TopHeader({
   onOpenSettings,
   companySettings: _companySettings,
   onQuickAction: _onQuickAction,
-  onToggleSidebar
+  onToggleSidebar,
+  onBack
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -41,17 +43,29 @@ function TopHeader({
   return (
     <header className="no-print h-16 shrink-0 bg-white border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
       
-      {/* Left: Hamburger Toggle & Search Bar */}
+      {/* Left: Hamburger Toggle, Backward Button & Search Bar */}
       <div className="flex items-center flex-1 max-w-md space-x-2 sm:space-x-3">
         {onToggleSidebar && (
           <button
             type="button"
             onClick={onToggleSidebar}
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0"
+            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
             title="Toggle Navigation Menu"
             aria-label="Toggle Navigation"
           >
             <Menu className="w-5 h-5" />
+          </button>
+        )}
+
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all shadow-2xs active:scale-95 shrink-0 cursor-pointer border border-slate-200/60"
+            title="Go to previous slide"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-600" />
+            <span className="hidden sm:inline">Back</span>
           </button>
         )}
 

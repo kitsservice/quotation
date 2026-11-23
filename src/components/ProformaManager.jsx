@@ -14,7 +14,8 @@ import {
   Receipt, 
   Search, 
   Clock,
-  FileCheck2 
+  FileCheck2,
+  ArrowLeft 
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { numberToIndianWords } from '../utils/numberToWords';
@@ -636,21 +637,38 @@ function ProformaManager({
       
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            {viewMode === 'create' 
-              ? 'Create Proforma Invoice' 
-              : (invoiceFilter === 'proforma' ? 'Proforma Invoices' : (invoiceFilter === 'tax' ? 'Final Invoices' : 'Commercial Invoices'))}
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            {viewMode === 'create' 
-              ? 'Add details, machinery line items, advance terms, and bank remittance' 
-              : (invoiceFilter === 'proforma'
-                  ? 'Track, issue, and manage commercial proforma offers for purchase orders and bank advances'
-                  : (invoiceFilter === 'tax'
-                      ? 'Official final invoices with E-Way bill and dispatch details'
-                      : 'Track and issue commercial proforma invoices and final invoices'))}
-          </p>
+        <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (viewMode === 'create') {
+                if (onClearInitialQuotation) onClearInitialQuotation();
+                setViewMode('cards');
+              } else if (onNavigateTab) {
+                onNavigateTab('dashboard');
+              }
+            }}
+            className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200/80 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+            title={viewMode === 'create' ? 'Back to Cards' : 'Back to Dashboard'}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              {viewMode === 'create' 
+                ? 'Create Proforma Invoice' 
+                : (invoiceFilter === 'proforma' ? 'Proforma Invoices' : (invoiceFilter === 'tax' ? 'Final Invoices' : 'Commercial Invoices'))}
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
+              {viewMode === 'create' 
+                ? 'Add details, machinery line items, advance terms, and bank remittance' 
+                : (invoiceFilter === 'proforma'
+                    ? 'Track, issue, and manage commercial proforma offers for purchase orders and bank advances'
+                    : (invoiceFilter === 'tax'
+                        ? 'Official final invoices with E-Way bill and dispatch details'
+                        : 'Track and issue commercial proforma invoices and final invoices'))}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-2">
