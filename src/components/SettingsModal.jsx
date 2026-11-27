@@ -114,6 +114,7 @@ function SettingsModal({
           active: true,
           testing: false,
           notFound: false,
+          permissionDenied: false,
           message: 'Connected successfully to Firebase Firestore! Real-time cloud sync is active across all devices.'
         });
       } else {
@@ -121,6 +122,7 @@ function SettingsModal({
           active: false,
           testing: false,
           notFound: Boolean(result.notFound),
+          permissionDenied: Boolean(result.permissionDenied),
           message: result.error || 'Failed to connect. Check configuration values.'
         });
       }
@@ -665,6 +667,17 @@ function SettingsModal({
                         className="inline-flex items-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition-colors"
                       >
                         <span>Open Firebase Console to Create Database (1-Click)</span>
+                        <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                      </a>
+                    )}
+                    {firebaseStatus.permissionDenied && (
+                      <a
+                        href={`https://console.firebase.google.com/project/${firebaseConfig.projectId || 'quotation-maker-1ac73'}/firestore/databases/-default-/rules`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center space-x-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs shadow-xs transition-colors"
+                      >
+                        <span>Open Firestore Rules to Allow Team Access (1-Click)</span>
                         <ExternalLink className="w-3.5 h-3.5 ml-1" />
                       </a>
                     )}

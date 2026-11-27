@@ -130,6 +130,13 @@ export async function testFirestoreConnection(customConfig = null) {
     return { ok: true, error: null };
   } catch (err) {
     const msg = err.message || '';
+    if (msg.includes('permission-denied') || msg.includes('PERMISSION_DENIED')) {
+      return {
+        ok: false,
+        permissionDenied: true,
+        error: 'Database created, but access is locked. In Firebase Console, click the "Rules" tab, change "if false;" to "if true;", then click "Publish".'
+      };
+    }
     if (msg.includes('not-found') || msg.includes('NOT_FOUND') || msg.includes('does not exist')) {
       return { 
         ok: false, 
