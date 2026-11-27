@@ -56,7 +56,7 @@ function createDefaultFormData(quotations, isDemo = false) {
     date: todayStr,
     dispatchTime: '',
     purpose: isDemo ? 'Demonstration / Exhibition' : 'Installation & Commissioning at Site',
-    projectName: isDemo ? 'IOT PID Based Temperature Monitoring system' : '',
+    projectName: '',
     isDemoChallan: Boolean(isDemo),
     linkedDocType: '',
     linkedDocId: '',
@@ -959,7 +959,7 @@ function DeliveryChallanManager({
                   type="text"
                   value={formData.dispatchTime}
                   onChange={(e) => setFormData({ ...formData, dispatchTime: e.target.value })}
-                  placeholder="e.g. 11:00 AM (Optional)"
+                  placeholder=""
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
                 />
               </div>
@@ -1014,7 +1014,7 @@ function DeliveryChallanManager({
                   type="text"
                   value={formData.projectName || ''}
                   onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-                  placeholder="e.g. IOT PID Based Temperature Monitoring system"
+                  placeholder=""
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
                 />
               </div>
