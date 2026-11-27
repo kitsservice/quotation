@@ -284,8 +284,8 @@ function QuotationPreview({
     <div className="space-y-6 pb-20">
       
       {/* Top Action Toolbar (Hidden during print) */}
-      <div className="no-print bg-white px-5 py-3 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3 max-w-5xl mx-auto">
-        <div className="flex items-center space-x-3">
+      <div className="no-print bg-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 w-full max-w-6xl mx-auto">
+        <div className="flex items-center space-x-3 min-w-0">
           <button
             onClick={onBack}
             className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-200/80 shrink-0"
@@ -294,31 +294,32 @@ function QuotationPreview({
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-slate-900 font-mono text-sm sm:text-base">
+          <div className="min-w-0">
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+              <span className="font-bold text-slate-900 font-mono text-sm sm:text-base whitespace-nowrap">
                 {safeQuotation.quotationNumber || 'Document'}
               </span>
-              <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+              <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap">
                 {isTaxInvoiceDoc ? 'TAX INV' : (safeQuotation.revision || (isProformaDoc ? 'PI' : 'Rev 0'))}
               </span>
-              <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-emerald-200">
+              <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-emerald-200 whitespace-nowrap">
                 {isTaxInvoiceDoc ? 'Final Invoice Issued' : (isProformaDoc ? 'Proforma Issued' : (safeQuotation.status || 'Approved'))}
               </span>
             </div>
             {safeQuotation.clientName && (
-              <p className="text-[11px] text-slate-500 truncate max-w-md mt-0.5">
+              <p className="text-[11px] text-slate-500 truncate max-w-xs sm:max-w-sm md:max-w-md mt-0.5">
                 {safeQuotation.clientName} {safeQuotation.subject ? `• ${safeQuotation.subject}` : ''}
               </p>
             )}
           </div>
         </div>
 
-        {/* Compact Action Buttons */}
-        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+        {/* Compact Action Buttons - Strictly in One Single Row */}
+        <div className="flex items-center flex-nowrap gap-1.5 sm:gap-2 shrink-0 overflow-x-auto scrollbar-none py-0.5">
           <button
+            type="button"
             onClick={handlePrint}
-            className="flex items-center space-x-1.5 px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 whitespace-nowrap"
             title="Print Document"
           >
             <Printer className="w-3.5 h-3.5 text-slate-600" />
@@ -326,9 +327,10 @@ function QuotationPreview({
           </button>
 
           <button
+            type="button"
             onClick={handleDownloadPdf}
             disabled={isExporting}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
             title="Download Official PDF"
           >
             <Download className="w-3.5 h-3.5" />
@@ -336,8 +338,9 @@ function QuotationPreview({
           </button>
 
           <button
+            type="button"
             onClick={() => onShare(safeQuotation)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-xs cursor-pointer"
+            className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-xs cursor-pointer shrink-0 whitespace-nowrap"
             title="Share via WhatsApp or Email"
           >
             <Share2 className="w-3.5 h-3.5" />
@@ -355,12 +358,14 @@ function QuotationPreview({
                 }
               }}
               variant="button"
+              buttonClassName="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
             />
           )}
 
           <button
+            type="button"
             onClick={() => onEdit(safeQuotation)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 whitespace-nowrap"
             title="Edit Document"
           >
             <Edit3 className="w-3.5 h-3.5" />

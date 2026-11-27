@@ -48,7 +48,7 @@ function DocumentConvertMenu({
   };
 
   return (
-    <div className="relative inline-block text-left" ref={menuRef}>
+    <div className="relative inline-block text-left shrink-0" ref={menuRef}>
       {variant === 'button' ? (
         <button
           type="button"
