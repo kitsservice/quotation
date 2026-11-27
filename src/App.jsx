@@ -333,7 +333,7 @@ export default function App() {
       if (!q) continue;
       const isDC = q.isDeliveryChallan || q.documentType === 'Delivery Challan';
       if (isDC) {
-        const isDemo = Boolean(q.isDemoChallan || q.purpose === 'Demonstration / Exhibition' || (q.challanNo && q.challanNo.includes('DEMO')));
+        const isDemo = Boolean(q.isDemoChallan || q.purpose === 'Demonstration / Exhibition' || (q.challanNo && (q.challanNo.includes('DEMO') || q.challanNo.includes('DCD'))));
         if (isDemo) {
           demoChallans.push(q);
         } else {
@@ -775,7 +775,7 @@ export default function App() {
                         setPreviewReturnTab(null);
                         setActiveTab(target);
                       } else if (currentQuotation?.isDeliveryChallan || currentQuotation?.documentType === 'Delivery Challan') {
-                        const isDemo = currentQuotation?.isDemoChallan || currentQuotation?.purpose === 'Demonstration / Exhibition' || (currentQuotation?.challanNo && currentQuotation?.challanNo.includes('DEMO'));
+                        const isDemo = currentQuotation?.isDemoChallan || currentQuotation?.purpose === 'Demonstration / Exhibition' || (currentQuotation?.challanNo && (currentQuotation.challanNo.includes('DEMO') || currentQuotation.challanNo.includes('DCD')));
                         setActiveTab(isDemo ? 'demo-challans' : 'challans');
                       } else if (currentQuotation?.isTaxInvoice || currentQuotation?.documentType === 'Tax Invoice') {
                         setActiveTab('invoices');
@@ -787,7 +787,7 @@ export default function App() {
                     }}
                     onEdit={() => {
                       if (currentQuotation?.isDeliveryChallan || currentQuotation?.documentType === 'Delivery Challan') {
-                        const isDemo = currentQuotation?.isDemoChallan || currentQuotation?.purpose === 'Demonstration / Exhibition' || (currentQuotation?.challanNo && currentQuotation?.challanNo.includes('DEMO'));
+                        const isDemo = currentQuotation?.isDemoChallan || currentQuotation?.purpose === 'Demonstration / Exhibition' || (currentQuotation?.challanNo && (currentQuotation.challanNo.includes('DEMO') || currentQuotation.challanNo.includes('DCD')));
                         setActiveTab(isDemo ? 'demo-challans' : 'challans');
                       } else if (currentQuotation?.isTaxInvoice || currentQuotation?.documentType === 'Tax Invoice') {
                         setActiveTab('invoices');

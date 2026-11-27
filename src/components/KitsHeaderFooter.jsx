@@ -30,23 +30,23 @@ export const KitsDocumentHeader = React.memo(function KitsDocumentHeader({ compa
       {/* Top Cyan Accent Strip */}
       <div className="h-1.5 w-full bg-[#0284c7] -mt-3 -mx-4 mb-3 sm:-mt-4 sm:-mx-6 sm:mb-4"></div>
 
-      {/* Main Header Row: 3-column balanced grid keeps the company name fixed dead center in one clean line */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center pb-3 w-full">
+      {/* Main Header Row: Flex layout with explicit gap and shrink-0 bounds prevents company name from ever covering up or overlapping the logo */}
+      <div className="flex items-center justify-between gap-3 sm:gap-4 pb-2.5 w-full relative">
         {/* Left: Official Isometric Cube Logo & Brand */}
         <div className="flex items-center justify-start shrink-0">
-          <KitsLogo className="h-16 sm:h-20 w-auto" src={companySettings?.logoUrl} />
+          <KitsLogo className="h-12 sm:h-14 md:h-16 w-auto" src={companySettings?.logoUrl} />
         </div>
 
         {/* Center: Company Name (Proper & in One Line) */}
-        <div className="text-center px-1 sm:px-2 flex justify-center items-center">
-          <h1 className="text-[12px] xs:text-[14px] sm:text-[16px] md:text-[18.5px] print:text-[18.5px] font-black tracking-tight text-[#0f245c] font-serif leading-none whitespace-nowrap">
+        <div className="flex-1 min-w-0 text-center px-1 sm:px-2 flex justify-center items-center">
+          <h1 className="text-[11.5px] xs:text-[13px] sm:text-[15px] md:text-[16.5px] print:text-[16px] font-black tracking-tight text-[#0f245c] font-serif uppercase whitespace-nowrap leading-none">
             {companyName}
           </h1>
         </div>
 
         {/* Right: Curved GSTIN Banner (Double Tone Gradient) */}
         <div className="flex items-center justify-end shrink-0">
-          <div className="bg-gradient-to-r from-[#0f245c] to-[#0284c7] text-white text-[9.5px] sm:text-[10px] font-bold py-0.5 px-3 rounded-l-full shadow-xs tracking-wide flex items-center whitespace-nowrap border-l border-y border-white/20">
+          <div className="bg-gradient-to-r from-[#0f245c] to-[#0284c7] text-white text-[9px] sm:text-[9.5px] font-bold py-1 px-3 rounded-l-full shadow-xs tracking-wider flex items-center whitespace-nowrap border-l border-y border-white/20">
             <span>GSTIN: {spacedGstn}</span>
           </div>
         </div>

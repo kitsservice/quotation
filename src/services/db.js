@@ -318,9 +318,34 @@ export function generateNextDeliveryChallanNumber(existingDocs = [], prefix = 'K
   return `${basePrefix}${nextSeq}`;
 }
 
-// Sequential Demo Delivery Challan Number Generator under Rule 55 (e.g. KITS/DEMO/026/11/001)
-export function generateNextDemoChallanNumber(existingDocs = [], prefix = 'KITS/DEMO') {
-  return generateNextDeliveryChallanNumber(existingDocs, prefix);
+// Sequential Demo Delivery Challan Number Generator under Rule 55 (e.g. KITS/DCD/001) starting strictly from 001
+export function generateNextDemoChallanNumber(existingDocs = [], prefix = 'KITS/DCD') {
+  const basePrefix = `${prefix}/`;
+  let maxSeq = 0;
+  const list = Array.isArray(existingDocs) ? existingDocs : [];
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
+    if (!item) continue;
+    const numStr = item.challanNo || item.invoiceNo || item.quotationNumber;
+    if (numStr) {
+      if (numStr.startsWith(basePrefix)) {
+        const num = parseInt(numStr.slice(basePrefix.length).trim(), 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      } else if (numStr.includes('DCD/')) {
+        const match = numStr.match(/DCD\/(\d+)/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxSeq) {
+            maxSeq = num;
+          }
+        }
+      }
+    }
+  }
+  const nextSeq = (maxSeq + 1).toString().padStart(3, '0');
+  return `${basePrefix}${nextSeq}`;
 }
 
 // Sequential Proforma Invoice Number Generator starting strictly from 1 or linked directly to Quotation

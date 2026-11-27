@@ -49,7 +49,7 @@ function getFormattedTime() {
 
 function createDefaultFormData(quotations, isDemo = false) {
   const todayStr = new Date().toISOString().split('T')[0];
-  const prefix = isDemo ? 'KITS/DEMO' : 'KITS/DC';
+  const prefix = isDemo ? 'KITS/DCD' : 'KITS/DC';
   const challanNo = isDemo 
     ? generateNextDemoChallanNumber(quotations, prefix)
     : generateNextDeliveryChallanNumber(quotations, prefix);
@@ -189,7 +189,7 @@ function DeliveryChallanManager({
     for (let i = 0; i < quotations.length; i++) {
       const q = quotations[i];
       if (q.isDeliveryChallan || q.documentType === 'Delivery Challan') {
-        const isDemo = Boolean(q.isDemoChallan || q.purpose === 'Demonstration / Exhibition' || (q.challanNo && q.challanNo.includes('DEMO')));
+        const isDemo = Boolean(q.isDemoChallan || q.purpose === 'Demonstration / Exhibition' || (q.challanNo && (q.challanNo.includes('DEMO') || q.challanNo.includes('DCD'))));
         if (isDemoModule ? isDemo : !isDemo) {
           challans.push(q);
         }
@@ -222,8 +222,8 @@ function DeliveryChallanManager({
   const [formData, setFormData] = useState(() => createDefaultFormData(quotations, isDemoModule));
 
   // Determine if currently working with a Demo Delivery Challan
-  const isCurrentDemo = Boolean(isDemoModule || formData?.isDemoChallan || formData?.purpose === 'Demonstration / Exhibition' || (formData?.challanNo && formData.challanNo.includes('DEMO')));
-  const isSelectedDemo = Boolean(isDemoModule || selectedChallan?.isDemoChallan || selectedChallan?.purpose === 'Demonstration / Exhibition' || (selectedChallan?.challanNo && selectedChallan.challanNo.includes('DEMO')));
+  const isCurrentDemo = Boolean(isDemoModule || formData?.isDemoChallan || formData?.purpose === 'Demonstration / Exhibition' || (formData?.challanNo && (formData.challanNo.includes('DEMO') || formData.challanNo.includes('DCD'))));
+  const isSelectedDemo = Boolean(isDemoModule || selectedChallan?.isDemoChallan || selectedChallan?.purpose === 'Demonstration / Exhibition' || (selectedChallan?.challanNo && (selectedChallan.challanNo.includes('DEMO') || selectedChallan.challanNo.includes('DCD'))));
 
   // Quick statistics calculated in a single fast pass
   const stats = useMemo(() => {
@@ -254,7 +254,7 @@ function DeliveryChallanManager({
   const handleStartEdit = (ch) => {
     setFormData({
       id: ch.id || '',
-      challanNo: ch.challanNo || ch.quotationNumber || generateNextDeliveryChallanNumber(quotations),
+      challanNo: ch.challanNo || ch.quotationNumber || (isDemoModule ? generateNextDemoChallanNumber(quotations) : generateNextDeliveryChallanNumber(quotations)),
       date: ch.date || ch.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
       dispatchTime: ch.dispatchTime || '11:00 AM',
       purpose: ch.purpose || 'Installation & Commissioning at Site',
@@ -913,7 +913,7 @@ function DeliveryChallanManager({
                   type="text"
                   value={formData.challanNo}
                   onChange={(e) => setFormData({ ...formData, challanNo: e.target.value })}
-                  placeholder="KITS/DC/026/11/001"
+                  placeholder={isCurrentDemo ? "KITS/DCD/001" : "KITS/DC/026/11/001"}
                   className="w-full px-3 py-2 font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl text-xs text-blue-700 focus:bg-white focus:outline-hidden focus:border-blue-500"
                 />
               </div>
