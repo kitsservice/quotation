@@ -16,6 +16,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { 
+  DEFAULT_FIREBASE_CONFIG,
   isFirebaseActive, 
   getStoredFirebaseConfig, 
   resetFirebaseCooldown,
@@ -117,6 +118,7 @@ function SettingsModal({
           permissionDenied: false,
           message: 'Connected successfully to Firebase Firestore! Real-time cloud sync is active across all devices.'
         });
+        if (typeof onReloadData === 'function') onReloadData();
       } else {
         setFirebaseStatus({
           active: false,
@@ -141,7 +143,8 @@ function SettingsModal({
     setSyncMessage('');
     try {
       const res = await syncAllToFirebase();
-      setSyncMessage(`Successfully synced ${res.quotationsSynced} quotes, ${res.clientsSynced} clients & ${res.productsSynced} products to Firebase!`);
+      setSyncMessage(`Successfully uploaded ${res.quotationsSynced} quotations/challans, ${res.clientsSynced} clients & ${res.productsSynced} products to Firebase!`);
+      if (typeof onReloadData === 'function') onReloadData();
     } catch (err) {
       setSyncMessage('Sync failed: ' + err.message);
     } finally {
@@ -685,9 +688,17 @@ function SettingsModal({
                 )}
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                  <div className="text-[11px] text-slate-400">
-                    💡 Get these from Firebase Console &gt; Project Settings &gt; General.
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.removeItem('kits_firebase_config');
+                      setFirebaseConfig(DEFAULT_FIREBASE_CONFIG);
+                      setFirebaseStatus({ active: false, testing: false, message: 'Reset to official KITS Firebase config. Click "Test & Save Firebase" to connect.' });
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+                  >
+                    ↺ Reset to Official KITS Config
+                  </button>
                   <button
                     type="submit"
                     className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-md shadow-blue-500/20"

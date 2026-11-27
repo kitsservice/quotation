@@ -18,7 +18,9 @@ import {
   deleteProduct,
   fetchCompanySettings, 
   saveCompanySettings,
-  importDatabaseBackup
+  importDatabaseBackup,
+  subscribeToQuotations,
+  subscribeToClients
 } from './services/db';
 import { 
   CheckCircle2, 
@@ -351,8 +353,20 @@ export default function App() {
     };
   }, []);
 
-  // Multi-laptop continuous synchronization: re-sync on window focus, online reconnect, or 20s background interval
+  // Multi-laptop continuous synchronization: real-time Firestore listeners + focus re-sync
   useEffect(() => {
+    const unsubQuotes = subscribeToQuotations((newQuotes) => {
+      if (Array.isArray(newQuotes) && newQuotes.length > 0) {
+        setQuotations(newQuotes);
+      }
+    });
+
+    const unsubClients = subscribeToClients((newClients) => {
+      if (Array.isArray(newClients) && newClients.length > 0) {
+        setClients(newClients);
+      }
+    });
+
     const handleSyncTrigger = () => {
       loadData();
     };
@@ -363,7 +377,10 @@ export default function App() {
         loadData();
       }
     }, 20000);
+
     return () => {
+      unsubQuotes();
+      unsubClients();
       window.removeEventListener('focus', handleSyncTrigger);
       window.removeEventListener('online', handleSyncTrigger);
       clearInterval(timer);

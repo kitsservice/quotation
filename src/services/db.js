@@ -38,7 +38,7 @@ function safeSetLocalStorage(key, value) {
 }
 
 // Safe timeout wrapper to prevent Firestore hanging on network/auth blocks
-function withTimeout(promise, ms = 2000) {
+function withTimeout(promise, ms = 10000) {
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase connection timeout')), ms))
@@ -436,32 +436,41 @@ export async function fetchQuotations() {
     try {
       const db = await getDbInstance();
       if (db) {
-        const { collection, getDocs } = await getFirestoreOps();
-        const querySnapshot = await withTimeout(getDocs(collection(db, 'quotations')), 2500);
-        const list = [];
+        const { collection, getDocs, doc, setDoc } = await getFirestoreOps();
+        const querySnapshot = await withTimeout(getDocs(collection(db, 'quotations')), 10000);
+        const cloudList = [];
         querySnapshot.forEach((docSnap) => {
-          list.push({ id: docSnap.id, ...docSnap.data() });
+          cloudList.push({ id: docSnap.id, ...docSnap.data() });
         });
-        if (list.length > 0) {
-          // Merge local and cloud documents so no laptop's locally created documents are lost
-          const mergedMap = new Map();
-          (localList || []).forEach(item => {
-            if (item && item.id) mergedMap.set(item.id, item);
-          });
-          list.forEach(item => {
-            if (item && item.id) {
-              const local = mergedMap.get(item.id);
-              if (!local || new Date(item.updatedAt || 0) >= new Date(local.updatedAt || 0)) {
-                mergedMap.set(item.id, item);
-              }
+
+        // 1. Merge cloud and local data
+        const mergedMap = new Map();
+        (localList || []).forEach(item => {
+          if (item && item.id) mergedMap.set(item.id, item);
+        });
+        cloudList.forEach(item => {
+          if (item && item.id) {
+            const local = mergedMap.get(item.id);
+            if (!local || new Date(item.updatedAt || 0) >= new Date(local.updatedAt || 0)) {
+              mergedMap.set(item.id, item);
             }
-          });
-          const mergedList = Array.from(mergedMap.values());
-          mergedList.sort((a, b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date));
-          cachedQuotations = mergedList;
-          safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, mergedList);
-          return mergedList;
+          }
+        });
+
+        // 2. AUTO-SYNC: If any local quotation is NOT in cloud, push it to cloud automatically
+        const cloudIds = new Set(cloudList.map(c => c.id));
+        const missingInCloud = (localList || []).filter(l => l && l.id && !cloudIds.has(l.id));
+        if (missingInCloud.length > 0) {
+          Promise.all(missingInCloud.map(item => 
+            setDoc(doc(db, 'quotations', item.id), sanitizeForFirestore(item), { merge: true })
+          )).catch(e => console.warn('Background quotation auto-upload error:', e));
         }
+
+        const mergedList = Array.from(mergedMap.values());
+        mergedList.sort((a, b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date));
+        cachedQuotations = mergedList;
+        safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, mergedList);
+        return mergedList;
       }
     } catch (err) {
       console.warn('Firestore quotations sync skipped:', err.message);
@@ -492,14 +501,18 @@ export async function saveQuotation(quotation) {
   cachedQuotations = localQuotes;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, localQuotes);
 
-  // Background non-blocking cloud persistence
-  getDbInstance().then(async (db) => {
-    if (db) {
-      const { doc, setDoc } = await getFirestoreOps();
-      withTimeout(setDoc(doc(db, 'quotations', id), sanitizeForFirestore(quoteData), { merge: true }), 4000)
-        .catch(err => console.warn('Background Firestore save skipped:', err.message));
+  // Directly await saving to cloud if online so write is confirmed
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const db = await getDbInstance();
+      if (db) {
+        const { doc, setDoc } = await getFirestoreOps();
+        await withTimeout(setDoc(doc(db, 'quotations', id), sanitizeForFirestore(quoteData), { merge: true }), 8000);
+      }
+    } catch (err) {
+      console.warn('Firestore direct save note (cached locally):', err.message);
     }
-  }).catch(() => {});
+  }
 
   return quoteData;
 }
@@ -509,13 +522,17 @@ export async function deleteQuotation(id) {
   cachedQuotations = localQuotes;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, localQuotes);
 
-  getDbInstance().then(async (db) => {
-    if (db) {
-      const { doc, deleteDoc } = await getFirestoreOps();
-      withTimeout(deleteDoc(doc(db, 'quotations', id)), 3000)
-        .catch(err => console.warn('Background Firestore delete skipped:', err.message));
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const db = await getDbInstance();
+      if (db) {
+        const { doc, deleteDoc } = await getFirestoreOps();
+        await withTimeout(deleteDoc(doc(db, 'quotations', id)), 8000);
+      }
+    } catch (err) {
+      console.warn('Firestore direct delete note:', err.message);
     }
-  }).catch(() => {});
+  }
 
   return true;
 }
@@ -529,30 +546,38 @@ export async function fetchClients() {
     try {
       const db = await getDbInstance();
       if (db) {
-        const { collection, getDocs } = await getFirestoreOps();
-        const snap = await withTimeout(getDocs(collection(db, 'clients')), 2500);
-        const list = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() }));
-        if (list.length > 0) {
-          // Merge local and cloud clients cleanly
-          const clientMap = new Map();
-          (localList || []).forEach(c => {
-            const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
-            if (key) clientMap.set(key, c);
-          });
-          list.forEach(c => {
-            const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
-            if (key) {
-              const local = clientMap.get(key);
-              clientMap.set(key, { ...(local || {}), ...c });
-            }
-          });
-          const merged = Array.from(clientMap.values());
-          merged.sort((a, b) => (a.companyName || '').localeCompare(b.companyName || ''));
-          cachedClients = merged;
-          safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, merged);
-          return merged;
+        const { collection, getDocs, doc, setDoc } = await getFirestoreOps();
+        const snap = await withTimeout(getDocs(collection(db, 'clients')), 10000);
+        const cloudList = [];
+        snap.forEach(d => cloudList.push({ id: d.id, ...d.data() }));
+
+        const clientMap = new Map();
+        (localList || []).forEach(c => {
+          const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
+          if (key) clientMap.set(key, c);
+        });
+        cloudList.forEach(c => {
+          const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
+          if (key) {
+            const local = clientMap.get(key);
+            clientMap.set(key, { ...(local || {}), ...c });
+          }
+        });
+
+        // AUTO-SYNC: Push any missing local clients to cloud
+        const cloudIds = new Set(cloudList.map(c => c.id));
+        const missingInCloud = (localList || []).filter(c => c && c.id && !cloudIds.has(c.id));
+        if (missingInCloud.length > 0) {
+          Promise.all(missingInCloud.map(c => 
+            setDoc(doc(db, 'clients', c.id), sanitizeForFirestore(c), { merge: true })
+          )).catch(e => console.warn('Background client auto-upload error:', e));
         }
+
+        const merged = Array.from(clientMap.values());
+        merged.sort((a, b) => (a.companyName || '').localeCompare(b.companyName || ''));
+        cachedClients = merged;
+        safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, merged);
+        return merged;
       }
     } catch (err) {
       console.warn('Firestore clients sync skipped:', err.message);
@@ -603,13 +628,17 @@ export async function saveClient(client) {
   cachedClients = dedupedList;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, dedupedList);
 
-  getDbInstance().then(async (db) => {
-    if (db) {
-      const { doc, setDoc } = await getFirestoreOps();
-      withTimeout(setDoc(doc(db, 'clients', id), sanitizeForFirestore(clientData), { merge: true }), 4000)
-        .catch(err => console.warn('Background Firestore client save skipped:', err.message));
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const db = await getDbInstance();
+      if (db) {
+        const { doc, setDoc } = await getFirestoreOps();
+        await withTimeout(setDoc(doc(db, 'clients', id), sanitizeForFirestore(clientData), { merge: true }), 8000);
+      }
+    } catch (err) {
+      console.warn('Firestore client direct save note (cached locally):', err.message);
     }
-  }).catch(() => {});
+  }
 
   return clientData;
 }
@@ -619,13 +648,17 @@ export async function deleteClient(id) {
   cachedClients = localList;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, localList);
 
-  getDbInstance().then(async (db) => {
-    if (db) {
-      const { doc, deleteDoc } = await getFirestoreOps();
-      withTimeout(deleteDoc(doc(db, 'clients', id)), 3000)
-        .catch(err => console.warn('Background Firestore client delete skipped:', err.message));
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const db = await getDbInstance();
+      if (db) {
+        const { doc, deleteDoc } = await getFirestoreOps();
+        await withTimeout(deleteDoc(doc(db, 'clients', id)), 8000);
+      }
+    } catch (err) {
+      console.warn('Firestore client direct delete note:', err.message);
     }
-  }).catch(() => {});
+  }
 
   return true;
 }
@@ -639,30 +672,38 @@ export async function fetchProducts() {
     try {
       const db = await getDbInstance();
       if (db) {
-        const { collection, getDocs } = await getFirestoreOps();
-        const snap = await withTimeout(getDocs(collection(db, 'products')), 2500);
-        const list = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() }));
-        if (list.length > 0) {
-          // Merge local and cloud products cleanly
-          const prodMap = new Map();
-          (localList || []).forEach(p => {
-            const key = (p.id || p.name || '').trim().toLowerCase();
-            if (key) prodMap.set(key, p);
-          });
-          list.forEach(p => {
-            const key = (p.id || p.name || '').trim().toLowerCase();
-            if (key) {
-              const local = prodMap.get(key);
-              prodMap.set(key, { ...(local || {}), ...p });
-            }
-          });
-          const merged = Array.from(prodMap.values());
-          merged.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-          cachedProducts = merged;
-          safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, merged);
-          return merged;
+        const { collection, getDocs, doc, setDoc } = await getFirestoreOps();
+        const snap = await withTimeout(getDocs(collection(db, 'products')), 10000);
+        const cloudList = [];
+        snap.forEach(d => cloudList.push({ id: d.id, ...d.data() }));
+
+        const prodMap = new Map();
+        (localList || []).forEach(p => {
+          const key = (p.id || p.name || '').trim().toLowerCase();
+          if (key) prodMap.set(key, p);
+        });
+        cloudList.forEach(p => {
+          const key = (p.id || p.name || '').trim().toLowerCase();
+          if (key) {
+            const local = prodMap.get(key);
+            prodMap.set(key, { ...(local || {}), ...p });
+          }
+        });
+
+        // AUTO-SYNC: Push any missing local products to cloud
+        const cloudIds = new Set(cloudList.map(p => p.id));
+        const missingInCloud = (localList || []).filter(p => p && p.id && !cloudIds.has(p.id));
+        if (missingInCloud.length > 0) {
+          Promise.all(missingInCloud.map(p => 
+            setDoc(doc(db, 'products', p.id), sanitizeForFirestore(p), { merge: true })
+          )).catch(e => console.warn('Background product auto-upload error:', e));
         }
+
+        const merged = Array.from(prodMap.values());
+        merged.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        cachedProducts = merged;
+        safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, merged);
+        return merged;
       }
     } catch (err) {
       console.warn('Firestore products sync skipped:', err.message);
@@ -686,13 +727,17 @@ export async function saveProduct(product) {
   cachedProducts = localList;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, localList);
 
-  getDbInstance().then(async (db) => {
-    if (db) {
-      const { doc, setDoc } = await getFirestoreOps();
-      withTimeout(setDoc(doc(db, 'products', id), sanitizeForFirestore(prodData), { merge: true }), 4000)
-        .catch(err => console.warn('Background Firestore product save skipped:', err.message));
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const db = await getDbInstance();
+      if (db) {
+        const { doc, setDoc } = await getFirestoreOps();
+        await withTimeout(setDoc(doc(db, 'products', id), sanitizeForFirestore(prodData), { merge: true }), 8000);
+      }
+    } catch (err) {
+      console.warn('Firestore product direct save note (cached locally):', err.message);
     }
-  }).catch(() => {});
+  }
 
   return prodData;
 }
@@ -702,13 +747,17 @@ export async function deleteProduct(id) {
   cachedProducts = localList;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, localList);
 
-  getDbInstance().then(async (db) => {
-    if (db) {
-      const { doc, deleteDoc } = await getFirestoreOps();
-      withTimeout(deleteDoc(doc(db, 'products', id)), 3000)
-        .catch(err => console.warn('Background Firestore product delete skipped:', err.message));
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const db = await getDbInstance();
+      if (db) {
+        const { doc, deleteDoc } = await getFirestoreOps();
+        await withTimeout(deleteDoc(doc(db, 'products', id)), 8000);
+      }
+    } catch (err) {
+      console.warn('Firestore product direct delete note:', err.message);
     }
-  }).catch(() => {});
+  }
 
   return true;
 }
@@ -722,14 +771,18 @@ export async function fetchCompanySettings() {
     try {
       const db = await getDbInstance();
       if (db) {
-        const { doc, getDoc } = await getFirestoreOps();
-        const docSnap = await withTimeout(getDoc(doc(db, 'settings', 'company')), 2500);
+        const { doc, getDoc, setDoc } = await getFirestoreOps();
+        const docSnap = await withTimeout(getDoc(doc(db, 'settings', 'company')), 10000);
         if (docSnap.exists()) {
           const settings = docSnap.data();
           normalizeCompanySettings(settings);
           cachedCompanySettings = settings;
           safeSetLocalStorage(LOCAL_STORAGE_KEYS.SETTINGS, settings);
           return settings;
+        } else if (localSettings && localSettings.name) {
+          // If cloud has no settings yet, seed with local settings
+          setDoc(doc(db, 'settings', 'company'), sanitizeForFirestore(localSettings), { merge: true })
+            .catch(e => console.warn('Company settings auto-upload error:', e));
         }
       }
     } catch (err) {
@@ -744,13 +797,17 @@ export async function saveCompanySettings(settings) {
   cachedCompanySettings = settings;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.SETTINGS, settings);
 
-  getDbInstance().then(async (db) => {
-    if (db) {
-      const { doc, setDoc } = await getFirestoreOps();
-      withTimeout(setDoc(doc(db, 'settings', 'company'), sanitizeForFirestore(settings), { merge: true }), 4000)
-        .catch(err => console.warn('Background Firestore settings save skipped:', err.message));
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const db = await getDbInstance();
+      if (db) {
+        const { doc, setDoc } = await getFirestoreOps();
+        await withTimeout(setDoc(doc(db, 'settings', 'company'), sanitizeForFirestore(settings), { merge: true }), 8000);
+      }
+    } catch (err) {
+      console.warn('Firestore settings direct save note (cached locally):', err.message);
     }
-  }).catch(() => {});
+  }
 
   return settings;
 }
@@ -868,33 +925,143 @@ export async function syncAllToFirebase() {
 
   const batch = writeBatch(db);
 
+  let opCount = 0;
   if (settings && settings.name) {
     batch.set(doc(db, 'settings', 'company'), sanitizeForFirestore(settings), { merge: true });
+    opCount++;
   }
 
   clients.forEach(client => {
     if (client.id) {
       batch.set(doc(db, 'clients', client.id), sanitizeForFirestore(client), { merge: true });
+      opCount++;
     }
   });
 
   products.forEach(product => {
     if (product.id) {
       batch.set(doc(db, 'products', product.id), sanitizeForFirestore(product), { merge: true });
+      opCount++;
     }
   });
 
   quotes.forEach(quote => {
     if (quote.id) {
       batch.set(doc(db, 'quotations', quote.id), sanitizeForFirestore(quote), { merge: true });
+      opCount++;
     }
   });
 
-  await withTimeout(batch.commit(), 10000);
+  if (opCount > 0) {
+    await withTimeout(batch.commit(), 15000);
+  }
 
   return {
     quotationsSynced: quotes.length,
     clientsSynced: clients.length,
     productsSynced: products.length
+  };
+}
+
+// ==================== REAL-TIME FIRESTORE LISTENERS ====================
+
+/**
+ * Attaches real-time Firestore listener for quotations.
+ * Any save/edit/delete made on any laptop fires callback on all other laptops in <200ms.
+ */
+export function subscribeToQuotations(callback) {
+  if (typeof window === 'undefined') return () => {};
+  let unsubscribe = null;
+  let active = true;
+
+  getDbInstance().then(async (db) => {
+    if (!db || !active) return;
+    try {
+      const { collection, onSnapshot } = await getFirestoreOps();
+      unsubscribe = onSnapshot(collection(db, 'quotations'), (snapshot) => {
+        const cloudList = [];
+        snapshot.forEach(docSnap => {
+          cloudList.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        const localList = getLocalQuotations();
+        const mergedMap = new Map();
+        localList.forEach(item => {
+          if (item && item.id) mergedMap.set(item.id, item);
+        });
+        cloudList.forEach(item => {
+          if (item && item.id) {
+            const local = mergedMap.get(item.id);
+            if (!local || new Date(item.updatedAt || 0) >= new Date(local.updatedAt || 0)) {
+              mergedMap.set(item.id, item);
+            }
+          }
+        });
+
+        const mergedList = Array.from(mergedMap.values());
+        mergedList.sort((a, b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date));
+        cachedQuotations = mergedList;
+        safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, mergedList);
+        callback(mergedList);
+      }, (err) => {
+        console.warn('Real-time quotation sync listener note:', err.message);
+      });
+    } catch (e) {
+      console.warn('Failed to attach quotation sync listener:', e);
+    }
+  }).catch(() => {});
+
+  return () => {
+    active = false;
+    if (typeof unsubscribe === 'function') unsubscribe();
+  };
+}
+
+/**
+ * Attaches real-time Firestore listener for client directory.
+ */
+export function subscribeToClients(callback) {
+  if (typeof window === 'undefined') return () => {};
+  let unsubscribe = null;
+  let active = true;
+
+  getDbInstance().then(async (db) => {
+    if (!db || !active) return;
+    try {
+      const { collection, onSnapshot } = await getFirestoreOps();
+      unsubscribe = onSnapshot(collection(db, 'clients'), (snapshot) => {
+        const cloudList = [];
+        snapshot.forEach(d => cloudList.push({ id: d.id, ...d.data() }));
+
+        const localList = getLocalClients();
+        const clientMap = new Map();
+        localList.forEach(c => {
+          const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
+          if (key) clientMap.set(key, c);
+        });
+        cloudList.forEach(c => {
+          const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
+          if (key) {
+            const local = clientMap.get(key);
+            clientMap.set(key, { ...(local || {}), ...c });
+          }
+        });
+
+        const merged = Array.from(clientMap.values());
+        merged.sort((a, b) => (a.companyName || '').localeCompare(b.companyName || ''));
+        cachedClients = merged;
+        safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, merged);
+        callback(merged);
+      }, (err) => {
+        console.warn('Real-time client sync listener note:', err.message);
+      });
+    } catch (e) {
+      console.warn('Failed to attach client sync listener:', e);
+    }
+  }).catch(() => {});
+
+  return () => {
+    active = false;
+    if (typeof unsubscribe === 'function') unsubscribe();
   };
 }

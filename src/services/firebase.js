@@ -38,11 +38,8 @@ let firebaseApp = null;
 let firestoreDb = null;
 let isConfigured = false;
 let initPromise = null;
-let lastFailureTime = 0;
-const FAILURE_COOLDOWN_MS = 25000; // 25s cooldown after failure to prevent cascading timeouts
 
 export function resetFirebaseCooldown() {
-  lastFailureTime = 0;
   initPromise = null;
 }
 
@@ -51,8 +48,8 @@ export function resetFirebaseCooldown() {
  * and avoid bundling 480KB of SDK in the critical path.
  */
 export async function initFirebase(customConfig = null) {
-  if (!customConfig && lastFailureTime > 0 && (Date.now() - lastFailureTime < FAILURE_COOLDOWN_MS)) {
-    return { isConfigured: false, db: null, error: 'Firebase cooldown active. Using fast local cache.' };
+  if (firestoreDb && !customConfig) {
+    return { isConfigured: true, db: firestoreDb, app: firebaseApp, error: null };
   }
 
   const config = customConfig || getStoredFirebaseConfig();
@@ -78,13 +75,11 @@ export async function initFirebase(customConfig = null) {
     
     firestoreDb = getFirestore(firebaseApp);
     isConfigured = true;
-    lastFailureTime = 0;
     return { isConfigured: true, db: firestoreDb, app: firebaseApp, error: null };
   } catch (error) {
     console.warn('Firebase initialization note (offline/fallback mode active):', error.message);
     isConfigured = false;
     firestoreDb = null;
-    lastFailureTime = Date.now();
     return { isConfigured: false, db: null, error: error.message };
   }
 }
@@ -93,10 +88,7 @@ export async function initFirebase(customConfig = null) {
  * Ensures Firebase is initialized and returns the Firestore instance.
  */
 export async function getDbInstance(customConfig = null) {
-  if (firestoreDb) return firestoreDb;
-  if (!customConfig && lastFailureTime > 0 && (Date.now() - lastFailureTime < FAILURE_COOLDOWN_MS)) {
-    return null;
-  }
+  if (firestoreDb && !customConfig) return firestoreDb;
   if (!initPromise) {
     initPromise = initFirebase(customConfig).finally(() => {
       initPromise = null;
@@ -123,7 +115,7 @@ export async function testFirestoreConnection(customConfig = null) {
     const { doc, getDoc } = await import('firebase/firestore');
     const testPromise = getDoc(doc(res.db, 'settings', 'ping'));
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Connection timed out. Check internet or Firebase setup.')), 4500)
+      setTimeout(() => reject(new Error('Connection timed out. Check internet or Firebase setup.')), 8000)
     );
 
     await Promise.race([testPromise, timeoutPromise]);
