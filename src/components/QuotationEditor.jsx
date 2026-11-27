@@ -87,7 +87,7 @@ function QuotationEditor({
         ? ((companySettings?.phone || '9823042432').replace(/(?:^|\s*[/,-]\s*)9453536807(?:\s*[/,-]\s*|$)/g, ' ').replace(/\s+/g, ' ').replace(/^[/\s,-]+|[/\s,-]+$/g, '').trim() || '9823042432')
         : (companySettings?.phone || '9823042432 / 9453536807');
 
-      let initialFrom = quotation.fromText || `${companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}, ${companySettings?.city || 'Akola'}\nMobile: ${cleanPhone}`;
+      let initialFrom = quotation.fromText || `${companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}, ${companySettings?.city || 'Akola'}\nMobile: ${cleanPhone}`;
       if (isSw && initialFrom.includes('9453536807')) {
         initialFrom = initialFrom
           .replace(/(?:^|\s*[/,-]\s*)9453536807(?:\s*[/,-]\s*|$)/g, ' ')
@@ -135,7 +135,7 @@ function QuotationEditor({
       date: todayStr,
       validityDays: 30,
       status: 'Draft',
-      fromText: `${companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}, ${companySettings?.city || 'Akola'}\nMobile: ${companySettings?.phone || '9823042432 / 9453536807'}`,
+      fromText: `${companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}, ${companySettings?.city || 'Akola'}\nMobile: ${companySettings?.phone || '9823042432 / 9453536807'}`,
       clientId: '',
       clientName: '',
       contactPerson: '',

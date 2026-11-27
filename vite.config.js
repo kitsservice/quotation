@@ -12,6 +12,8 @@ export default defineConfig({
     target: 'es2022',
     chunkSizeWarningLimit: 1200,
     cssCodeSplit: true,
+    cssMinify: true,
+    reportCompressedSize: false,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -21,15 +23,6 @@ export default defineConfig({
             id.includes('node_modules/scheduler/')
           ) {
             return 'vendor-react';
-          }
-          if (
-            id.includes('node_modules/jspdf') || 
-            id.includes('node_modules/html2canvas') ||
-            id.includes('node_modules/dompurify') ||
-            id.includes('node_modules/canvg') ||
-            id.includes('node_modules/fflate')
-          ) {
-            return 'vendor-pdf';
           }
           if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
             return 'vendor-firebase';

@@ -103,7 +103,6 @@ function mergeClientsFromDocuments(existingClients = [], documents = []) {
           createdAt: doc.date || doc.createdAt || new Date().toISOString()
         };
         merged.push(newClient);
-        saveClient(newClient).catch(() => {});
       }
     }
   }

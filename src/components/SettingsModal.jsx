@@ -11,7 +11,7 @@ import {
   RotateCcw,
   HardDrive
 } from 'lucide-react';
-import { initFirebase, isFirebaseActive, getStoredFirebaseConfig } from '../services/firebase';
+import { initFirebase, isFirebaseActive, getStoredFirebaseConfig, resetFirebaseCooldown } from '../services/firebase';
 import { 
   syncAllToFirebase, 
   exportDatabaseBackup, 
@@ -37,6 +37,13 @@ function SettingsModal({
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
   const [backupMessage, setBackupMessage] = useState('');
+
+  // Keep modal form state in sync when companySettings changes
+  const [prevSettings, setPrevSettings] = useState(companySettings);
+  if (companySettings !== prevSettings) {
+    setPrevSettings(companySettings);
+    setFormData(companySettings || {});
+  }
 
   if (!isOpen) return null;
 
@@ -73,6 +80,7 @@ function SettingsModal({
     setFirebaseStatus({ active: false, testing: true, message: 'Connecting to Firebase...' });
 
     try {
+      resetFirebaseCooldown();
       localStorage.setItem('kits_firebase_config', JSON.stringify(firebaseConfig));
       const result = await initFirebase(firebaseConfig);
 
@@ -280,7 +288,7 @@ function SettingsModal({
                     required
                     value={formData.name || ''}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="KITS Robotics & Automation Pvt.Ltd"
+                    placeholder="KITS ROBOTICS & AUTOMATION PVT.LTD."
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:bg-white"
                   />
                 </div>
@@ -445,7 +453,7 @@ function SettingsModal({
                     required
                     value={formData.bankName || ''}
                     onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                    placeholder="e.g. HDFC Bank Ltd."
+                    placeholder="e.g. CITY UNION BANK"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white"
                   />
                 </div>
@@ -459,6 +467,7 @@ function SettingsModal({
                     required
                     value={formData.accountNumber || ''}
                     onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                    placeholder="e.g. 510909010369706"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold focus:bg-white"
                   />
                 </div>
@@ -469,7 +478,7 @@ function SettingsModal({
                     required
                     value={formData.ifscCode || ''}
                     onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value.toUpperCase() })}
-                    placeholder="HDFC0000123"
+                    placeholder="e.g. CIUB0000800"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold focus:bg-white"
                   />
                 </div>
@@ -481,7 +490,7 @@ function SettingsModal({
                   type="text"
                   value={formData.branch || ''}
                   onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                  placeholder="e.g. Bhosari Industrial Branch, Pune"
+                  placeholder="e.g. Akola Branch"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white"
                 />
               </div>

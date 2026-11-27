@@ -47,7 +47,7 @@ function ShareModal({
 
   // Generate WhatsApp Message matching the KITS reference style
   const messageText = `*QUOTATION*
-*${companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}*
+*${companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}*
 ----------------------------------------
 *Quotation No:* ${quotation.quotationNumber}
 *Category:* ${quotation.category || 'Automation Work'}
@@ -65,11 +65,11 @@ ${items.map((item, i) => `${i + 1}. ${item.title} | Qty: ${item.qty} | Rate: ₹
 *General Terms:*
 • Delivery: ${quotation.deliveryTerms || 'Within 1–2 weeks'}
 • GST: ${quotation.gstTerms || '18% Extra'}
-• Payment Terms: ${quotation.paymentTerms || '100% in advance along with PO.'}
+• Payment Terms: ${quotation.paymentTerms || '75% in advance along with PO, 25% before dispatch.'}
 • Warranty: ${quotation.warrantyTerms || '12 months from installation'}
 
 We look forward to valued order.
-*${companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}*
+*${companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}*
 Contact: ${contactPhone} | ${companySettings?.email || 'info@kitstechsolutions.com'}`;
 
   const handleCopy = () => {

@@ -58,8 +58,10 @@ function buildFormDataFromQuote(quote, proformaInvoices) {
       shipToSameAsBillTo: quote.shipToSameAsBillTo !== undefined ? quote.shipToSameAsBillTo : true,
       shippingAddress: quote.shippingAddress || '',
       shippingGstin: quote.shippingGstin || '',
-      advancePercent: quote.advancePercent !== undefined ? quote.advancePercent : (isSw ? 40 : 50),
-      paymentTerms: quote.paymentTerms || (isSw ? '40% Advance with PO, 40% on Demo/Testing, 20% on final launch & handover.' : '50% Advance with PO, 50% Before Dispatch'),
+      advancePercent: quote.advancePercent !== undefined ? (quote.advancePercent === 50 ? 75 : quote.advancePercent) : (isSw ? 40 : 75),
+      paymentTerms: (!quote.paymentTerms || quote.paymentTerms.includes('50% Advance')) 
+        ? (isSw ? '40% Advance with PO, 40% on Demo/Testing, 20% on final launch & handover.' : '75% Advance with PO, 25% Before Dispatch') 
+        : quote.paymentTerms,
       deliveryTimeline: quote.deliveryTerms || quote.deliveryTimeline || (isSw ? 'Within 3–6 weeks from receipt of advance and content' : 'Within 2–4 weeks from order & advance'),
       freightTerms: quote.freightTerms || (isSw ? 'Not Applicable (Electronic / Remote Delivery & Cloud Setup)' : 'Extra at actual / Borne by Client'),
       packingForwarding: quote.packingForwarding || (isSw ? 'Not Applicable (Cloud / Digital Delivery)' : 'Included in base price'),
@@ -102,8 +104,8 @@ function buildFormDataFromQuote(quote, proformaInvoices) {
     shipToSameAsBillTo: true,
     shippingAddress: '',
     shippingGstin: '',
-    advancePercent: 50,
-    paymentTerms: '50% Advance with PO, 50% Before Dispatch',
+    advancePercent: 75,
+    paymentTerms: '75% Advance with PO, 25% Before Dispatch',
     deliveryTimeline: 'Within 2–4 weeks from order & advance',
     freightTerms: 'Extra at actual / Borne by Client',
     packingForwarding: 'Included in base price',
@@ -186,7 +188,7 @@ function ProformaManager({
       for (let i = 0; i < proformaInvoices.length; i++) {
         const p = proformaInvoices[i];
         const g = Number(p.grandTotal || 0);
-        const adv = Number(p.advancePayable || Math.round(g * ((p.advancePercent || 50) / 100)));
+        const adv = Number(p.advancePayable || Math.round(g * (((p.advancePercent === 50 ? 75 : p.advancePercent) || 75) / 100)));
         const bal = Number(p.balancePayable || Math.max(0, g - adv));
         totalVal += g;
         totalAdv += adv;
@@ -278,8 +280,10 @@ function ProformaManager({
       shipToSameAsBillTo: inv.shipToSameAsBillTo !== undefined ? inv.shipToSameAsBillTo : true,
       shippingAddress: inv.shippingAddress || '',
       shippingGstin: inv.shippingGstin || '',
-      advancePercent: inv.advancePercent !== undefined ? inv.advancePercent : (isSw ? 40 : 50),
-      paymentTerms: inv.paymentTerms || (isSw ? '40% Advance with PO, 40% on Demo/Testing, 20% on final launch & handover.' : '50% Advance with PO, 50% Before Dispatch'),
+      advancePercent: inv.advancePercent !== undefined ? (inv.advancePercent === 50 ? 75 : inv.advancePercent) : (isSw ? 40 : 75),
+      paymentTerms: (!inv.paymentTerms || inv.paymentTerms.includes('50% Advance')) 
+        ? (isSw ? '40% Advance with PO, 40% on Demo/Testing, 20% on final launch & handover.' : '75% Advance with PO, 25% Before Dispatch') 
+        : inv.paymentTerms,
       deliveryTimeline: inv.deliveryTerms || inv.deliveryTimeline || (isSw ? 'Within 3–6 weeks from receipt of advance and content' : 'Within 2–4 weeks from order & advance'),
       freightTerms: inv.freightTerms || (isSw ? 'Not Applicable (Electronic / Remote Delivery & Cloud Setup)' : 'Extra at actual / Borne by Client'),
       packingForwarding: inv.packingForwarding || (isSw ? 'Not Applicable (Cloud / Digital Delivery)' : 'Included in base price'),
@@ -407,10 +411,10 @@ function ProformaManager({
     setFormData(prev => ({
       ...prev,
       category: newCat,
-      advancePercent: isSw ? 40 : (prev.advancePercent === 40 ? 50 : prev.advancePercent),
-      paymentTerms: isSw && (!prev.paymentTerms || prev.paymentTerms.includes('50% Advance')) 
+      advancePercent: isSw ? 40 : (prev.advancePercent === 40 || prev.advancePercent === 50 ? 75 : prev.advancePercent),
+      paymentTerms: isSw && (!prev.paymentTerms || prev.paymentTerms.includes('75% Advance') || prev.paymentTerms.includes('50% Advance')) 
         ? '40% Advance with PO, 40% on Demo/Testing, 20% on final launch & handover.' 
-        : (!isSw && prev.paymentTerms?.includes('40% Advance') ? '50% Advance with PO, 50% Before Dispatch' : prev.paymentTerms),
+        : (!isSw && (prev.paymentTerms?.includes('40% Advance') || prev.paymentTerms?.includes('50% Advance')) ? '75% Advance with PO, 25% Before Dispatch' : prev.paymentTerms),
       deliveryTimeline: isSw && (!prev.deliveryTimeline || prev.deliveryTimeline.includes('2–4 weeks'))
         ? 'Within 3–6 weeks from receipt of advance and content'
         : (!isSw && prev.deliveryTimeline?.includes('3–6 weeks') ? 'Within 2–4 weeks from order & advance' : prev.deliveryTimeline),
@@ -892,6 +896,47 @@ function ProformaManager({
                   </div>
                 </div>
               </div>
+
+              {/* Commercial Advance Payment Terms Block */}
+              <div className="p-2.5 bg-emerald-50/60 border border-emerald-200/80 rounded-xl space-y-2">
+                <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+                  <span>Advance Payment & Commercial Terms</span>
+                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded">Default: 75% Advance</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-1">
+                    <label className="block text-[10px] font-medium text-slate-600 mb-0.5">Advance %</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={formData.advancePercent}
+                        onChange={(e) => {
+                          const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
+                          setFormData(prev => ({
+                            ...prev,
+                            advancePercent: val,
+                            paymentTerms: `${val}% Advance with PO, ${100 - val}% Before Dispatch`
+                          }));
+                        }}
+                        className="w-full pl-2 pr-6 py-1 bg-white border border-emerald-200 rounded-lg text-xs font-mono font-bold text-emerald-950 focus:ring-1 focus:ring-emerald-500 outline-none"
+                      />
+                      <span className="absolute right-2 top-1 text-xs text-slate-400 font-bold pointer-events-none">%</span>
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-medium text-slate-600 mb-0.5">Payment Terms</label>
+                    <input
+                      type="text"
+                      value={formData.paymentTerms}
+                      onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
+                      placeholder="e.g. 75% Advance with PO, 25% Before Dispatch"
+                      className="w-full px-2 py-1 bg-white border border-emerald-200 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Card 2: Billing & Consignee / Delivery Plant Addresses */}
@@ -1301,6 +1346,18 @@ function ProformaManager({
                     <span className="font-extrabold text-base sm:text-lg font-mono">{formatCurrency(calculations.grandTotal)}</span>
                   </div>
 
+                  {/* Advance Payable & Balance Breakdown */}
+                  <div className="mt-2 p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-emerald-900 font-bold">
+                      <span>Advance Required ({formData.advancePercent || 75}%):</span>
+                      <span className="font-mono text-sm">{formatCurrency(calculations.advancePayable)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600 text-[11px]">
+                      <span>Balance on Dispatch ({100 - (formData.advancePercent || 75)}%):</span>
+                      <span className="font-mono font-medium">{formatCurrency(calculations.balancePayable)}</span>
+                    </div>
+                  </div>
+
                 </div>
               </div>
 
@@ -1421,7 +1478,7 @@ function ProformaManager({
                 const isTaxDoc = inv.isTaxInvoice || inv.documentType === 'Tax Invoice';
                 const advAmt = isTaxDoc 
                   ? (inv.advancePaid !== undefined ? inv.advancePaid : 0)
-                  : (inv.advancePayable || Math.round((inv.grandTotal || 0) * ((inv.advancePercent || 50) / 100)));
+                  : (inv.advancePayable || Math.round((inv.grandTotal || 0) * (((inv.advancePercent === 50 ? 75 : inv.advancePercent) || 75) / 100)));
                 const balanceDue = isTaxDoc
                   ? (inv.balanceDue !== undefined ? inv.balanceDue : Math.max(0, (inv.grandTotal || 0) - advAmt))
                   : (inv.balancePayable || Math.max(0, (inv.grandTotal || 0) - advAmt));
@@ -1550,7 +1607,7 @@ function ProformaManager({
                         ) : (
                           <div className="space-y-0.5">
                             <div className="text-[10px] sm:text-[11px] text-slate-700">
-                              Advance ({inv.advancePercent || 50}%): <span className="font-bold text-emerald-700 font-mono">{formatCurrency(advAmt)}</span>
+                              Advance ({(inv.advancePercent === 50 ? 75 : inv.advancePercent) || 75}%): <span className="font-bold text-emerald-700 font-mono">{formatCurrency(advAmt)}</span>
                             </div>
                             <div className="text-[9px] text-slate-400">
                               Bal on Delivery: <span className="font-mono font-medium">{formatCurrency(balanceDue)}</span>

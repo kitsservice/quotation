@@ -38,12 +38,23 @@ let firebaseApp = null;
 let firestoreDb = null;
 let isConfigured = false;
 let initPromise = null;
+let lastFailureTime = 0;
+const FAILURE_COOLDOWN_MS = 25000; // 25s cooldown after failure to prevent cascading timeouts
+
+export function resetFirebaseCooldown() {
+  lastFailureTime = 0;
+  initPromise = null;
+}
 
 /**
  * Lazy loads Firebase and Firestore on-demand to achieve instantaneous page loads
  * and avoid bundling 480KB of SDK in the critical path.
  */
 export async function initFirebase(customConfig = null) {
+  if (!customConfig && lastFailureTime > 0 && (Date.now() - lastFailureTime < FAILURE_COOLDOWN_MS)) {
+    return { isConfigured: false, db: null, error: 'Firebase cooldown active. Using fast local cache.' };
+  }
+
   const config = customConfig || getStoredFirebaseConfig();
 
   // Validate if minimum required fields are present
@@ -67,11 +78,13 @@ export async function initFirebase(customConfig = null) {
     
     firestoreDb = getFirestore(firebaseApp);
     isConfigured = true;
+    lastFailureTime = 0;
     return { isConfigured: true, db: firestoreDb, app: firebaseApp, error: null };
   } catch (error) {
-    console.warn('Firebase initialization error, fallback to local storage:', error.message);
+    console.warn('Firebase initialization note (offline/fallback mode active):', error.message);
     isConfigured = false;
     firestoreDb = null;
+    lastFailureTime = Date.now();
     return { isConfigured: false, db: null, error: error.message };
   }
 }
@@ -81,12 +94,16 @@ export async function initFirebase(customConfig = null) {
  */
 export async function getDbInstance(customConfig = null) {
   if (firestoreDb) return firestoreDb;
+  if (!customConfig && lastFailureTime > 0 && (Date.now() - lastFailureTime < FAILURE_COOLDOWN_MS)) {
+    return null;
+  }
   if (!initPromise) {
-    initPromise = initFirebase(customConfig);
+    initPromise = initFirebase(customConfig).finally(() => {
+      initPromise = null;
+    });
   }
   const result = await initPromise;
-  initPromise = null;
-  return result.db;
+  return result?.db || null;
 }
 
 export const isFirebaseActive = () => isConfigured;

@@ -208,12 +208,18 @@ function DeliveryChallanManager({
   // Form State
   const [formData, setFormData] = useState(() => createDefaultFormData(quotations));
 
-  // Quick statistics
+  // Quick statistics calculated in a single fast pass
   const stats = useMemo(() => {
     const total = deliveryChallans.length;
-    const dispatched = deliveryChallans.filter(c => (c.status || 'Dispatched') === 'Dispatched').length;
-    const onApproval = deliveryChallans.filter(c => c.purpose === 'Supply on Approval').length;
-    const totalValue = deliveryChallans.reduce((sum, c) => sum + (Number(c.totalAssessableValue || c.total || 0)), 0);
+    let dispatched = 0;
+    let onApproval = 0;
+    let totalValue = 0;
+    for (let i = 0; i < total; i++) {
+      const c = deliveryChallans[i];
+      if ((c.status || 'Dispatched') === 'Dispatched') dispatched++;
+      if (c.purpose === 'Supply on Approval') onApproval++;
+      totalValue += Number(c.totalAssessableValue || c.total || 0);
+    }
     return { total, dispatched, onApproval, totalValue };
   }, [deliveryChallans]);
 
@@ -1518,8 +1524,8 @@ function DeliveryChallanManager({
                     <div className="text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-1">
                       Details of Consignor (From):
                     </div>
-                    <div className="font-bold text-slate-950">
-                      {companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}
+                    <div className="font-bold text-slate-950 whitespace-nowrap">
+                      {companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}
                     </div>
                     <div className="text-slate-700 leading-tight">
                       {companySettings?.address || 'Mukta Plaza, KITS Square, Income Tax Chowk, Gaurakshan Road, Akola-444001, Maharashtra'}
@@ -1669,12 +1675,12 @@ function DeliveryChallanManager({
                     </div>
                   </div>
 
-                  {/* Right: For KITS Robotics & Automation Pvt. Ltd. */}
+                  {/* Right: For KITS ROBOTICS & AUTOMATION PVT.LTD. */}
                   <div className="border border-slate-300 rounded-lg p-3 flex flex-col justify-between text-right">
                     <div>
                       <div className="text-[10px] font-bold text-slate-600 uppercase">For Consignor</div>
-                      <div className="text-xs font-black text-slate-950">
-                        {companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}
+                      <div className="text-xs font-black text-slate-950 whitespace-nowrap">
+                        {companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}
                       </div>
                     </div>
 

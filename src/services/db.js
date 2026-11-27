@@ -164,6 +164,57 @@ export function getLocalProducts() {
   return cachedProducts;
 }
 
+const OLD_COMPANY_NAMES = [
+  'KITS ROBOTICS AND AUTOMATION PVT.LTD.',
+  'KITS Robotics and Automation Pvt.Ltd.',
+  'KITS Robotics & Automation Pvt.Ltd',
+  'KITS Robotics & Automation Pvt. Ltd.',
+  'KITS Robotics and Automation Pvt.Ltd',
+  'KITS ROBOTICS & AUTOMATION PVT. LTD.',
+  'KITS ROBOTICS & AUTOMATION PVT.LTD',
+  'KITS Robotics & Automation',
+  'KITS Robotics & Automation Pvt Ltd'
+];
+
+export function normalizeCompanySettings(settings) {
+  if (!settings || typeof settings !== 'object') {
+    return { ...defaultCompanySettings };
+  }
+  const currentName = (settings.name || '').trim();
+  if (!currentName || OLD_COMPANY_NAMES.includes(currentName)) {
+    settings.name = 'KITS ROBOTICS & AUTOMATION PVT.LTD.';
+  }
+  const currentBankName = (settings.bankAccountName || '').trim();
+  if (!currentBankName || OLD_COMPANY_NAMES.includes(currentBankName)) {
+    settings.bankAccountName = 'KITS ROBOTICS & AUTOMATION PVT.LTD.';
+  }
+  const OLD_BANKS = ['HDFC Bank Ltd.', 'HDFC Bank', 'HDFC Bank Ltd'];
+  const OLD_ACCOUNTS = ['50200012345678'];
+  const OLD_IFSC = ['HDFC0000123'];
+
+  if (!settings.bankName || OLD_BANKS.includes(settings.bankName.trim())) {
+    settings.bankName = 'CITY UNION BANK';
+  }
+  if (!settings.accountNumber || OLD_ACCOUNTS.includes(settings.accountNumber.trim())) {
+    settings.accountNumber = '510909010369706';
+  }
+  if (!settings.ifscCode || OLD_IFSC.includes(settings.ifscCode.trim())) {
+    settings.ifscCode = 'CIUB0000800';
+  }
+  if (!settings.branch || settings.branch === 'Akola Branch' || settings.branch === 'Akola') {
+    settings.branch = 'Akola Branch';
+  }
+  if (Array.isArray(settings.defaultTerms)) {
+    settings.defaultTerms = settings.defaultTerms.map(t => {
+      if (typeof t === 'string' && (t.includes('50% in advance') || t.includes('100% in advance'))) {
+        return 'Payment Terms: 75% in advance along with PO, 25% before dispatch.';
+      }
+      return t;
+    });
+  }
+  return settings;
+}
+
 export function getLocalCompanySettings() {
   if (cachedCompanySettings !== null) {
     return cachedCompanySettings;
@@ -173,15 +224,9 @@ export function getLocalCompanySettings() {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(LOCAL_STORAGE_KEYS.SETTINGS) : null;
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.name) {
-        if (
-          parsed.name === 'KITS ROBOTICS AND AUTOMATION PVT.LTD.' || 
-          parsed.name === 'KITS Robotics and Automation Pvt.Ltd.' ||
-          parsed.name === 'KITS ROBOTICS & AUTOMATION PVT.LTD.'
-        ) {
-          parsed.name = 'KITS Robotics & Automation Pvt.Ltd';
-          safeSetLocalStorage(LOCAL_STORAGE_KEYS.SETTINGS, parsed);
-        }
+      if (parsed) {
+        normalizeCompanySettings(parsed);
+        safeSetLocalStorage(LOCAL_STORAGE_KEYS.SETTINGS, parsed);
         cachedCompanySettings = parsed;
         return cachedCompanySettings;
       }
@@ -189,29 +234,36 @@ export function getLocalCompanySettings() {
   } catch (e) {
     console.warn('Error reading local settings:', e);
   }
-  cachedCompanySettings = defaultCompanySettings;
+  cachedCompanySettings = { ...defaultCompanySettings };
   return cachedCompanySettings;
 }
 
 // ==================== QUOTATION & PROFORMA NUMBER GENERATOR ====================
 
+// Precompiled regular expressions for fast ID generation
+const TRAILING_DIGITS_REGEX = /(\d+)$/;
+const DC_PREFIX_REGEX = /^DC-/i;
+const INV_PREFIX_REGEX = /^INV-/i;
+
 // Sequential Quotation Number Generator starting strictly from 1 (e.g. KITS/AKL/026/11/001)
 export function generateNextQuotationNumber(existingQuotes = [], prefix = 'KITS/AKL') {
-  const currentYear = new Date().getFullYear().toString().slice(-2);
-  const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
+  const d = new Date();
+  const currentYear = d.getFullYear().toString().slice(-2);
+  const currentMonth = (d.getMonth() + 1).toString().padStart(2, '0');
   const basePrefix = `${prefix}/0${currentYear}/${currentMonth}/`;
 
   let maxSeq = 0;
-  (existingQuotes || []).forEach(q => {
-    if (q?.quotationNumber) {
-      if (q.quotationNumber.startsWith(basePrefix)) {
-        const numPart = q.quotationNumber.replace(basePrefix, '').trim();
-        const num = parseInt(numPart, 10);
+  const list = Array.isArray(existingQuotes) ? existingQuotes : [];
+  for (let i = 0; i < list.length; i++) {
+    const qNum = list[i]?.quotationNumber;
+    if (qNum) {
+      if (qNum.startsWith(basePrefix)) {
+        const num = parseInt(qNum.slice(basePrefix.length).trim(), 10);
         if (!isNaN(num) && num > maxSeq) {
           maxSeq = num;
         }
       } else {
-        const match = q.quotationNumber.match(/(\d+)$/);
+        const match = qNum.match(TRAILING_DIGITS_REGEX);
         if (match) {
           const num = parseInt(match[1], 10);
           if (!isNaN(num) && num > maxSeq) {
@@ -220,7 +272,7 @@ export function generateNextQuotationNumber(existingQuotes = [], prefix = 'KITS/
         }
       }
     }
-  });
+  }
 
   const nextSeq = (maxSeq + 1).toString().padStart(3, '0');
   return `${basePrefix}${nextSeq}`;
@@ -228,27 +280,30 @@ export function generateNextQuotationNumber(existingQuotes = [], prefix = 'KITS/
 
 // Sequential Delivery Challan Number Generator under Rule 55 (e.g. KITS/DC/026/11/001)
 export function generateNextDeliveryChallanNumber(existingDocs = [], prefix = 'KITS/DC') {
-  const currentYear = new Date().getFullYear().toString().slice(-2);
-  const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
+  const d = new Date();
+  const currentYear = d.getFullYear().toString().slice(-2);
+  const currentMonth = (d.getMonth() + 1).toString().padStart(2, '0');
   const basePrefix = `${prefix}/0${currentYear}/${currentMonth}/`;
 
   let maxSeq = 0;
-  (existingDocs || []).forEach(d => {
-    const numStr = d.challanNo || d.invoiceNo || d.quotationNumber;
+  const list = Array.isArray(existingDocs) ? existingDocs : [];
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
+    if (!item) continue;
+    const numStr = item.challanNo || item.invoiceNo || item.quotationNumber;
     if (numStr) {
       if (numStr.startsWith(basePrefix)) {
-        const numPart = numStr.replace(basePrefix, '').trim();
-        const num = parseInt(numPart, 10);
+        const num = parseInt(numStr.slice(basePrefix.length).trim(), 10);
         if (!isNaN(num) && num > maxSeq) {
           maxSeq = num;
         }
-      } else if (numStr.startsWith('DC-')) {
-        const num = parseInt(numStr.replace('DC-', ''), 10);
+      } else if (DC_PREFIX_REGEX.test(numStr)) {
+        const num = parseInt(numStr.replace(DC_PREFIX_REGEX, ''), 10);
         if (!isNaN(num) && num > maxSeq) {
           maxSeq = num;
         }
-      } else if (d.documentType === 'Delivery Challan' || d.isDeliveryChallan) {
-        const match = numStr.match(/(\d+)$/);
+      } else if (item.documentType === 'Delivery Challan' || item.isDeliveryChallan) {
+        const match = numStr.match(TRAILING_DIGITS_REGEX);
         if (match) {
           const num = parseInt(match[1], 10);
           if (!isNaN(num) && num > maxSeq) {
@@ -257,7 +312,7 @@ export function generateNextDeliveryChallanNumber(existingDocs = [], prefix = 'K
         }
       }
     }
-  });
+  }
 
   const nextSeq = (maxSeq + 1).toString().padStart(3, '0');
   return `${basePrefix}${nextSeq}`;
@@ -266,7 +321,7 @@ export function generateNextDeliveryChallanNumber(existingDocs = [], prefix = 'K
 // Sequential Proforma Invoice Number Generator starting strictly from 1 or linked directly to Quotation
 export function generateNextProformaNumber(existingDocs = [], linkedQuote = null) {
   if (linkedQuote?.quotationNumber) {
-    const match = linkedQuote.quotationNumber.match(/(\d+)$/);
+    const match = linkedQuote.quotationNumber.match(TRAILING_DIGITS_REGEX);
     if (match) {
       return `PI-${match[1]}`;
     }
@@ -274,10 +329,12 @@ export function generateNextProformaNumber(existingDocs = [], linkedQuote = null
   }
 
   let maxSeq = 0;
-  (existingDocs || []).forEach(d => {
-    const numStr = d.invoiceNo || d.quotationNumber;
+  const list = Array.isArray(existingDocs) ? existingDocs : [];
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
+    const numStr = item?.invoiceNo || item?.quotationNumber;
     if (numStr) {
-      const match = numStr.match(/(\d+)$/);
+      const match = numStr.match(TRAILING_DIGITS_REGEX);
       if (match) {
         const num = parseInt(match[1], 10);
         if (!isNaN(num) && num > maxSeq) {
@@ -285,7 +342,7 @@ export function generateNextProformaNumber(existingDocs = [], linkedQuote = null
         }
       }
     }
-  });
+  }
 
   const nextSeq = (maxSeq + 1).toString().padStart(3, '0');
   return `PI-${nextSeq}`;
@@ -293,27 +350,30 @@ export function generateNextProformaNumber(existingDocs = [], linkedQuote = null
 
 // Sequential Final Tax Invoice Number Generator starting strictly from 1 (e.g. KITS/INV/026/11/001)
 export function generateNextTaxInvoiceNumber(existingDocs = [], prefix = 'KITS/INV') {
-  const currentYear = new Date().getFullYear().toString().slice(-2);
-  const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
+  const d = new Date();
+  const currentYear = d.getFullYear().toString().slice(-2);
+  const currentMonth = (d.getMonth() + 1).toString().padStart(2, '0');
   const basePrefix = `${prefix}/0${currentYear}/${currentMonth}/`;
 
   let maxSeq = 0;
-  (existingDocs || []).forEach(d => {
-    const numStr = d.invoiceNo || d.quotationNumber;
+  const list = Array.isArray(existingDocs) ? existingDocs : [];
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
+    if (!item) continue;
+    const numStr = item.invoiceNo || item.quotationNumber;
     if (numStr) {
       if (numStr.startsWith(basePrefix)) {
-        const numPart = numStr.replace(basePrefix, '').trim();
-        const num = parseInt(numPart, 10);
+        const num = parseInt(numStr.slice(basePrefix.length).trim(), 10);
         if (!isNaN(num) && num > maxSeq) {
           maxSeq = num;
         }
-      } else if (numStr.startsWith('INV-')) {
-        const num = parseInt(numStr.replace('INV-', ''), 10);
+      } else if (INV_PREFIX_REGEX.test(numStr)) {
+        const num = parseInt(numStr.replace(INV_PREFIX_REGEX, ''), 10);
         if (!isNaN(num) && num > maxSeq) {
           maxSeq = num;
         }
-      } else if (d.documentType === 'Tax Invoice' || d.isTaxInvoice) {
-        const match = numStr.match(/(\d+)$/);
+      } else if (item.documentType === 'Tax Invoice' || item.isTaxInvoice) {
+        const match = numStr.match(TRAILING_DIGITS_REGEX);
         if (match) {
           const num = parseInt(match[1], 10);
           if (!isNaN(num) && num > maxSeq) {
@@ -322,7 +382,7 @@ export function generateNextTaxInvoiceNumber(existingDocs = [], prefix = 'KITS/I
         }
       }
     }
-  });
+  }
 
   const nextSeq = (maxSeq + 1).toString().padStart(3, '0');
   return `${basePrefix}${nextSeq}`;
@@ -585,6 +645,7 @@ export async function fetchCompanySettings() {
         const docSnap = await withTimeout(getDoc(doc(db, 'settings', 'company')), 2500);
         if (docSnap.exists()) {
           const settings = docSnap.data();
+          normalizeCompanySettings(settings);
           cachedCompanySettings = settings;
           safeSetLocalStorage(LOCAL_STORAGE_KEYS.SETTINGS, settings);
           return settings;
@@ -644,6 +705,7 @@ export async function importDatabaseBackup(backupData) {
     safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, backupData.products);
   }
   if (backupData.settings && typeof backupData.settings === 'object') {
+    normalizeCompanySettings(backupData.settings);
     cachedCompanySettings = backupData.settings;
     safeSetLocalStorage(LOCAL_STORAGE_KEYS.SETTINGS, backupData.settings);
   }

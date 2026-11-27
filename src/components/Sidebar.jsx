@@ -99,11 +99,11 @@ function Sidebar({
 
               {/* Company & Product Title */}
               <div className="min-w-0">
-                <div className="font-extrabold text-[13px] tracking-wider text-white uppercase leading-tight">
-                  KITS Robotics
+                <div className="font-extrabold text-[12px] tracking-wider text-white uppercase leading-tight whitespace-nowrap">
+                  KITS ROBOTICS &amp;
                 </div>
-                <div className="text-[10px] text-blue-400 font-semibold tracking-tight leading-tight mt-0.5">
-                  &amp; Automation Pvt. Ltd.
+                <div className="text-[10px] text-blue-400 font-semibold tracking-tight leading-tight mt-0.5 whitespace-nowrap">
+                  AUTOMATION PVT.LTD.
                 </div>
               </div>
             </div>

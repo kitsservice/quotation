@@ -364,7 +364,7 @@ function ReportsAnalytics({
   // Comprehensive Live CSV Export
   const handleExport = () => {
     const rows = [
-      ['KITS Robotics & Automation Pvt. Ltd. - Performance & Analytics Report'],
+      ['KITS ROBOTICS & AUTOMATION PVT.LTD. - Performance & Analytics Report'],
       [`Reporting Period: ${selectedPeriod.label}`, `Generated on: ${new Date().toLocaleDateString('en-GB')}`],
       [''],
       ['FINANCIAL SUMMARY'],
@@ -1062,7 +1062,7 @@ function ReportsAnalytics({
                   ) : (
                     topCustomers.map((cust) => {
                       const billed = cust.billed || 0;
-                      const advance = Math.round(billed * 0.5); // 50% standard industrial advance
+                      const advance = Math.round(billed * 0.75); // 75% standard industrial advance
                       const balance = Math.max(0, billed - advance);
                       return (
                         <tr key={cust.id} className="hover:bg-slate-50 transition-colors">

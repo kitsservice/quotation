@@ -21,22 +21,6 @@ import {
 import { getStateFromGstin } from '../utils/gstHelper';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
-function matchDocumentToClient(doc, client) {
-  if (!doc || !client) return false;
-  if (doc.clientId && doc.clientId === client.id) return true;
-  if (doc.customerId && doc.customerId === client.id) return true;
-
-  const docName = (doc.clientName || doc.customerName || doc.companyName || '').trim().toLowerCase();
-  const clientName = (client.companyName || '').trim().toLowerCase();
-  if (docName && clientName && docName === clientName) return true;
-
-  const docGstin = (doc.clientGstin || doc.customerGstin || doc.gstin || '').trim().toUpperCase();
-  const clientGstin = (client.gstin || '').trim().toUpperCase();
-  if (docGstin && clientGstin && docGstin.length >= 15 && docGstin === clientGstin) return true;
-
-  return false;
-}
-
 function classifyDocument(doc) {
   if (!doc) {
     return { 
@@ -205,14 +189,16 @@ function ClientsManager({
     return deduped;
   }, [clients]);
 
-  // Compute document associations for every customer
+  // Compute document associations for every customer in high-speed O(M + N) using indexed lookup maps
   const clientDocumentStats = useMemo(() => {
     const map = new Map();
+    const byNameMap = new Map();
+    const byGstinMap = new Map();
 
     for (let i = 0; i < uniqueClients.length; i++) {
       const c = uniqueClients[i];
       if (!c || !c.id) continue;
-      map.set(c.id, {
+      const statsObj = {
         all: [],
         quotes: [],
         proformas: [],
@@ -221,7 +207,12 @@ function ClientsManager({
         totalBilled: 0,
         totalQuoted: 0,
         totalItemsDispatched: 0
-      });
+      };
+      map.set(c.id, statsObj);
+      const nameKey = (c.companyName || '').trim().toLowerCase();
+      if (nameKey) byNameMap.set(nameKey, statsObj);
+      const gstinKey = (c.gstin || '').trim().toUpperCase();
+      if (gstinKey && gstinKey.length >= 15) byGstinMap.set(gstinKey, statsObj);
     }
 
     const safeDocs = Array.isArray(quotations) ? quotations : [];
@@ -231,11 +222,16 @@ function ClientsManager({
       let matchedClient = null;
       if (doc.clientId && map.has(doc.clientId)) {
         matchedClient = map.get(doc.clientId);
+      } else if (doc.customerId && map.has(doc.customerId)) {
+        matchedClient = map.get(doc.customerId);
       } else {
-        for (let i = 0; i < uniqueClients.length; i++) {
-          if (matchDocumentToClient(doc, uniqueClients[i])) {
-            matchedClient = map.get(uniqueClients[i].id);
-            break;
+        const docName = (doc.clientName || doc.customerName || doc.companyName || '').trim().toLowerCase();
+        if (docName && byNameMap.has(docName)) {
+          matchedClient = byNameMap.get(docName);
+        } else {
+          const docGstin = (doc.clientGstin || doc.customerGstin || doc.gstin || '').trim().toUpperCase();
+          if (docGstin && docGstin.length >= 15 && byGstinMap.has(docGstin)) {
+            matchedClient = byGstinMap.get(docGstin);
           }
         }
       }

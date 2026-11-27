@@ -72,7 +72,17 @@ function Dashboard({
 
   // Partition strictly genuine commercial quotations (excluding Proformas, Tax Invoices, Delivery Challans)
   const genuineQuotations = useMemo(() => {
-    return (quotations || []).filter(q => {
+    const list = Array.isArray(quotations) ? quotations : [];
+    let hasOtherDoc = false;
+    for (let i = 0; i < list.length; i++) {
+      const q = list[i];
+      if (q && (q.isDeliveryChallan || q.documentType === 'Delivery Challan' || q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.isProforma || q.documentType === 'Proforma Invoice')) {
+        hasOtherDoc = true;
+        break;
+      }
+    }
+    if (!hasOtherDoc) return list;
+    return list.filter(q => {
       if (!q) return false;
       const isDC = q.isDeliveryChallan || q.documentType === 'Delivery Challan';
       const isTI = q.isTaxInvoice || q.documentType === 'Tax Invoice';
@@ -274,7 +284,7 @@ function Dashboard({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Dashboard</h1>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium">Overview of KITS Robotics & Automation operations</p>
+          <p className="text-xs text-slate-500 mt-0.5 font-medium">Overview of KITS ROBOTICS & AUTOMATION PVT.LTD. operations</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -763,7 +773,7 @@ function Dashboard({
               <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
                 {searchTerm 
                   ? 'Try adjusting your search criteria.' 
-                  : 'Get started by creating your very first professional quotation for KITS Robotics & Automation.'}
+                  : 'Get started by creating your very first professional quotation for KITS ROBOTICS & AUTOMATION PVT.LTD.'}
               </p>
               <button
                 onClick={onNewQuotation}

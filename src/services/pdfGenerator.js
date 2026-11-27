@@ -4,17 +4,25 @@
  * Dynamically loads heavy jsPDF & html2canvas on-demand for zero initial bundle bloat.
  * Releases canvas memory immediately after capture to prevent browser memory bloat.
  */
+let pdfLibPromise = null;
+function loadPdfLibraries() {
+  if (!pdfLibPromise) {
+    pdfLibPromise = Promise.all([
+      import('jspdf'),
+      import('html2canvas')
+    ]);
+  }
+  return pdfLibPromise;
+}
+
 export async function exportToPdf(containerId = 'printable-quotation', filename = 'KITS_Document.pdf') {
   const container = document.getElementById(containerId);
   if (!container) {
     throw new Error('Printable container element was not found.');
   }
 
-  // Load heavy libraries dynamically on demand
-  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-    import('jspdf'),
-    import('html2canvas')
-  ]);
+  // Load heavy libraries dynamically on demand with cached module promise
+  const [{ default: jsPDF }, { default: html2canvas }] = await loadPdfLibraries();
 
   // Check if multiple explicit A4 pages exist (.a4-sheet)
   const pageElements = container.querySelectorAll('.a4-sheet');

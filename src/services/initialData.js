@@ -1,5 +1,5 @@
 export const defaultCompanySettings = {
-  name: 'KITS Robotics & Automation Pvt.Ltd',
+  name: 'KITS ROBOTICS & AUTOMATION PVT.LTD.',
   tagline: 'inspire Engineering',
   gstin: '27AAMCK1536C1ZP',
   pan: 'AAMCK1536C',
@@ -12,10 +12,10 @@ export const defaultCompanySettings = {
   phone: '9823042432 / 7385582242 / 9453536807',
   website: 'www.kitstechsolutions.com',
   quotationPrefix: 'KITS/AKL',
-  bankName: 'HDFC Bank Ltd.',
-  bankAccountName: 'KITS Robotics & Automation Pvt.Ltd',
-  accountNumber: '50200012345678',
-  ifscCode: 'HDFC0000123',
+  bankName: 'CITY UNION BANK',
+  bankAccountName: 'KITS ROBOTICS & AUTOMATION PVT.LTD.',
+  accountNumber: '510909010369706',
+  ifscCode: 'CIUB0000800',
   branch: 'Akola Branch',
   signatoryName: 'Authorized Signatory',
   signatoryDesignation: 'Director / Management',
@@ -25,7 +25,7 @@ export const defaultCompanySettings = {
     'GST: 18% Extra',
     'Taxes, Freight and Transportation: As Actual',
     'Validity: 30 Days',
-    'Payment Terms: 100% in advance along with PO.',
+    'Payment Terms: 75% in advance along with PO, 25% before dispatch.',
     'Warranty (Manufacturing Defect): 12 months from the date of installation OR 13 months from the date of invoice.'
   ],
   defaultNotesExclusions: [

@@ -102,6 +102,7 @@ export const SOFTWARE_DEFAULT_EXCLUSIONS = [
 ];
 
 const stateFromGstinCache = new Map();
+const MAX_STATE_CACHE_SIZE = 250;
 
 /**
  * Returns state name and code inferred from first 2 digits of GSTIN
@@ -113,15 +114,19 @@ export function getStateFromGstin(gstin = '') {
     return stateFromGstinCache.get(clean);
   }
 
+  let result = null;
   if (clean.length >= 2) {
     const code = clean.slice(0, 2);
     if (GST_STATE_CODES[code]) {
-      const result = { code, state: GST_STATE_CODES[code] };
-      stateFromGstinCache.set(clean, result);
-      return result;
+      result = { code, state: GST_STATE_CODES[code] };
     }
   }
-  return null;
+
+  if (stateFromGstinCache.size >= MAX_STATE_CACHE_SIZE) {
+    stateFromGstinCache.clear();
+  }
+  stateFromGstinCache.set(clean, result);
+  return result;
 }
 
 /**
@@ -130,6 +135,7 @@ export function getStateFromGstin(gstin = '') {
  */
 export function isIntraStateSupply(clientInput = '', companyInput = 'Maharashtra') {
   if (!clientInput) return true;
+  if (clientInput === companyInput) return true;
 
   // Resolve client state
   let clientState = String(clientInput).trim();
@@ -161,10 +167,11 @@ export function computeFinancialBreakdown(items = [], extraCharges = {}, company
   
   // Group by HSN/SAC
   const hsnSummaryMap = {};
+  const safeItems = Array.isArray(items) ? items : [];
 
-  items.forEach(item => {
-    // If item is marked as optional, it is not included in totals
-    if (item.isOptional) return;
+  for (let i = 0; i < safeItems.length; i++) {
+    const item = safeItems[i];
+    if (!item || item.isOptional) continue;
 
     const qty = parseFloat(item.qty) || 0;
     const unitPrice = parseFloat(item.unitPrice !== undefined ? item.unitPrice : (item.rate || 0)) || 0;
@@ -191,12 +198,12 @@ export function computeFinancialBreakdown(items = [], extraCharges = {}, company
     }
     hsnSummaryMap[hsnKey].taxable += taxableAmount;
     hsnSummaryMap[hsnKey].taxAmount += (taxableAmount * gstRate) / 100;
-  });
+  }
 
-  const packaging = parseFloat(extraCharges.packagingCharges) || 0;
-  const freight = parseFloat(extraCharges.freightCharges) || 0;
-  const other = parseFloat(extraCharges.otherCharges) || 0;
-  const discountOnTotal = parseFloat(extraCharges.discountOnTotal) || 0;
+  const packaging = parseFloat(extraCharges?.packagingCharges) || 0;
+  const freight = parseFloat(extraCharges?.freightCharges) || 0;
+  const other = parseFloat(extraCharges?.otherCharges) || 0;
+  const discountOnTotal = parseFloat(extraCharges?.discountOnTotal) || 0;
 
   const totalExtra = packaging + freight + other;
   // Apply standard 18% GST on packaging/freight/ancillary services if applicable
@@ -219,10 +226,11 @@ export function computeFinancialBreakdown(items = [], extraCharges = {}, company
   const netTaxable = Math.max(0, subtotal + totalExtra - discountOnTotal);
   
   // Total tax from all HSN buckets
+  const hsnSummaryList = Object.values(hsnSummaryMap);
   let totalGst = 0;
-  Object.values(hsnSummaryMap).forEach(h => {
-    totalGst += h.taxAmount;
-  });
+  for (let i = 0; i < hsnSummaryList.length; i++) {
+    totalGst += hsnSummaryList[i].taxAmount;
+  }
 
   const isIntraState = isIntraStateSupply(clientState, companyState);
 
@@ -262,6 +270,6 @@ export function computeFinancialBreakdown(items = [], extraCharges = {}, company
     grandTotal,
     totalProfit,
     profitMarginPercent,
-    hsnSummary: Object.values(hsnSummaryMap)
+    hsnSummary: hsnSummaryList
   };
 }

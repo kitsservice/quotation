@@ -105,19 +105,19 @@ function KitsBankDetailsBox({ companySettings, title = 'Official Banking Coordin
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
         <div>
           <span className="text-slate-500 font-medium text-[9.5px] sm:text-[10px] block leading-tight">Beneficiary Account Name:</span>
-          <span className="font-bold text-slate-950 text-xs sm:text-[12.5px] block leading-tight">{companySettings?.bankAccountName || 'KITS Robotics & Automation Pvt.Ltd'}</span>
+          <span className="font-bold text-slate-950 text-xs sm:text-[12.5px] block leading-tight whitespace-nowrap">{companySettings?.bankAccountName || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}</span>
         </div>
         <div>
           <span className="text-slate-500 font-medium text-[9.5px] sm:text-[10px] block leading-tight">Bank Name & Branch:</span>
-          <span className="font-bold text-slate-950 text-xs sm:text-[12.5px] block leading-tight">{companySettings?.bankName || 'HDFC Bank Ltd.'}, {companySettings?.branch || 'Akola Branch'}</span>
+          <span className="font-bold text-slate-950 text-xs sm:text-[12.5px] block leading-tight">{companySettings?.bankName || 'CITY UNION BANK'}, {companySettings?.branch || 'Akola Branch'}</span>
         </div>
         <div>
           <span className="text-slate-500 font-medium text-[9.5px] sm:text-[10px] block leading-tight">Current Account Number:</span>
-          <span className="font-mono font-black text-blue-950 text-xs sm:text-sm block leading-tight">{companySettings?.accountNumber || '50200012345678'}</span>
+          <span className="font-mono font-black text-blue-950 text-xs sm:text-sm block leading-tight">{companySettings?.accountNumber || '510909010369706'}</span>
         </div>
         <div>
           <span className="text-slate-500 font-medium text-[9.5px] sm:text-[10px] block leading-tight">RTGS / NEFT IFSC Code:</span>
-          <span className="font-mono font-black text-blue-950 text-xs sm:text-sm block leading-tight">{companySettings?.ifscCode || 'HDFC0000123'}</span>
+          <span className="font-mono font-black text-blue-950 text-xs sm:text-sm block leading-tight">{companySettings?.ifscCode || 'CIUB0000800'}</span>
         </div>
       </div>
     </div>
@@ -139,8 +139,8 @@ function KitsSignatoryBlock({ companySettings, noteText = null }) {
       </div>
 
       <div className="text-right">
-        <div className="font-bold text-sm tracking-tight text-[#0f245c] uppercase mb-12">
-          For {companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}
+        <div className="font-bold text-xs sm:text-sm tracking-tight text-[#0f245c] uppercase mb-12 whitespace-nowrap">
+          For {companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}
         </div>
         <div className="w-48 border-b border-black ml-auto mb-1"></div>
         <div className="text-xs font-bold text-slate-900">
@@ -264,12 +264,15 @@ function QuotationPreview({
     ? (safeQuotation.grandTotal || (totalTaxable + (isIntraState ? (cgstVal + sgstVal) : igstVal)))
     : totalTaxable;
 
-  const advancePercent = safeQuotation.advancePercent || 50;
+  const rawAdvPercent = safeQuotation.advancePercent;
+  const advancePercent = rawAdvPercent === 50 ? 75 : (rawAdvPercent || 75);
   const advanceAmount = safeQuotation.advancePaid !== undefined 
     ? parseFloat(safeQuotation.advancePaid) || 0 
-    : (safeQuotation.advancePayable !== undefined ? parseFloat(safeQuotation.advancePayable) || 0 : Math.round((grandTotal * advancePercent) / 100));
+    : (safeQuotation.advancePayable !== undefined 
+        ? (rawAdvPercent === 50 ? Math.round((grandTotal * 75) / 100) : parseFloat(safeQuotation.advancePayable) || 0)
+        : Math.round((grandTotal * advancePercent) / 100));
   const balanceAmount = safeQuotation.balanceDue !== undefined 
-    ? parseFloat(safeQuotation.balanceDue) || 0 
+    ? (rawAdvPercent === 50 ? Math.max(0, grandTotal - advanceAmount) : parseFloat(safeQuotation.balanceDue) || 0)
     : Math.max(0, grandTotal - advanceAmount);
 
   const exclusionsList = Array.isArray(safeQuotation.notesExclusions) && safeQuotation.notesExclusions.length > 0
@@ -406,11 +409,11 @@ function QuotationPreview({
                   <div className="p-2 space-y-2">
                     <div>
                       <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">From (Supplier / Issuer):</div>
-                      <div className="font-bold text-slate-950 text-xs sm:text-[11.5px] leading-tight">
-                        {companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}, {companySettings?.city || 'Akola'}
+                      <div className="font-bold text-slate-950 text-xs sm:text-[11.5px] leading-tight whitespace-nowrap">
+                        {companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}, {companySettings?.city || 'Akola'}
                       </div>
                       <div className="text-slate-800 text-[10px] leading-tight mt-0.5">
-                        PAN: <span className="font-mono font-semibold">{companySettings?.pan || 'AAMCK1536C'}</span> • State: {companySettings?.state || 'Maharashtra'}
+                        GSTIN: <span className="font-mono font-semibold">{companySettings?.gstin || '27AAMCK1536C1ZP'}</span> • PAN: <span className="font-mono font-semibold">{companySettings?.pan || 'AAMCK1536C'}</span> • State: {companySettings?.state || 'Maharashtra'}
                       </div>
                       <div className="text-slate-800 text-[10px]">Mobile: {displayPhone}</div>
                     </div>
@@ -777,8 +780,11 @@ function QuotationPreview({
                   <div className="space-y-2.5 max-w-[55%]">
                     <div>
                       <span className="font-semibold text-slate-800">From:</span>
-                      <div className="font-bold text-slate-950">
-                        {companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}, {companySettings?.city || 'Akola'}
+                      <div className="font-bold text-slate-950 whitespace-nowrap">
+                        {companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}, {companySettings?.city || 'Akola'}
+                      </div>
+                      <div className="text-slate-800 text-[11px] mt-0.5">
+                        GSTIN: <span className="font-mono font-semibold">{companySettings?.gstin || '27AAMCK1536C1ZP'}</span>
                       </div>
                       <div className="text-slate-800">Mobile: {displayPhone}</div>
                     </div>
@@ -953,6 +959,7 @@ function QuotationPreview({
                     <FormattedTermsList termsText={safeQuotation.paymentTerms || SOFTWARE_DEFAULT_TERMS} />
                   ) : (
                     <div className="space-y-0.5 text-slate-800">
+                      <div><span className="font-bold text-slate-950">Payment Terms:</span> {(!safeQuotation.paymentTerms || safeQuotation.paymentTerms.includes('50% Advance')) ? '75% Advance with PO, 25% Before Dispatch' : safeQuotation.paymentTerms}</div>
                       <div><span className="font-bold text-slate-950">Delivery Timeline:</span> {safeQuotation.deliveryTerms || 'Within 2–4 weeks from confirmed PO & advance'}</div>
                       <div><span className="font-bold text-slate-950">Freight & Transport:</span> {safeQuotation.freightTerms || 'Extra at actual / Borne by Client'}</div>
                       <div><span className="font-bold text-slate-950">Packing & Forwarding:</span> {safeQuotation.packingForwarding || 'Included in base price'}</div>
@@ -1055,8 +1062,11 @@ function QuotationPreview({
                   <div className="space-y-3 max-w-[60%]">
                     <div>
                       <span className="font-semibold text-slate-800">From:</span>
-                      <div className="font-bold text-slate-950">
-                        {companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}, {companySettings?.city || 'Akola'}
+                      <div className="font-bold text-slate-950 whitespace-nowrap">
+                        {companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}, {companySettings?.city || 'Akola'}
+                      </div>
+                      <div className="text-slate-800 text-[11px] mt-0.5">
+                        GSTIN: <span className="font-mono font-semibold">{companySettings?.gstin || '27AAMCK1536C1ZP'}</span>
                       </div>
                       <div className="text-slate-800">
                         Mobile: {displayPhone}
@@ -1215,7 +1225,7 @@ function QuotationPreview({
                       <div><span className="font-bold text-slate-950">GST:</span> {safeQuotation.gstTerms || '18% Extra'}</div>
                       <div><span className="font-bold text-slate-950">Taxes, Freight and Transportation:</span> {safeQuotation.freightTerms || 'As Actual'}</div>
                       <div><span className="font-bold text-slate-950">Validity:</span> {safeQuotation.validityDays || 30} Days</div>
-                      <div className="whitespace-pre-line"><span className="font-bold text-slate-950">Payment Terms:</span> {safeQuotation.paymentTerms || '100% in advance along with PO.'}</div>
+                      <div className="whitespace-pre-line"><span className="font-bold text-slate-950">Payment Terms:</span> {safeQuotation.paymentTerms || '75% in advance along with PO, 25% before dispatch.'}</div>
                       <div><span className="font-bold text-slate-950">Warranty (Manufacturing Defect):</span> {safeQuotation.warrantyTerms || '12 months from the date of installation OR 13 months from the date of invoice.'}</div>
                     </div>
                   )}
@@ -1262,8 +1272,8 @@ function QuotationPreview({
 
                 {/* Sign-off */}
                 <div className="pt-8">
-                  <div className="font-bold text-sm tracking-tight text-[#0f245c] uppercase">
-                    {companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd'}
+                  <div className="font-bold text-sm tracking-tight text-[#0f245c] uppercase whitespace-nowrap">
+                    {companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'}
                   </div>
                 </div>
 

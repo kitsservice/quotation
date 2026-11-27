@@ -4,10 +4,10 @@ import kitsLogoSrc from '../assets/kits-logo.jpg';
 /**
  * Official KITS "inspire Engineering" Logo
  */
-export default function KitsLogo({ 
+function KitsLogo({ 
   className = "h-18 sm:h-20 w-auto", 
   src = null, 
-  alt = "KITS Robotics & Automation Pvt.Ltd - inspire Engineering" 
+  alt = "KITS ROBOTICS & AUTOMATION PVT.LTD. - inspire Engineering" 
 }) {
   const finalSrc = src || kitsLogoSrc;
 
@@ -21,3 +21,5 @@ export default function KitsLogo({
     </div>
   );
 }
+
+export default React.memo(KitsLogo);

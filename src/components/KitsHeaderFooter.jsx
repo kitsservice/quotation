@@ -9,39 +9,45 @@ export const KitsDocumentHeader = React.memo(function KitsDocumentHeader({ compa
   const gstin = companySettings?.gstin || '27AAMCK1536C1ZP';
   // Format GSTN with spaces: "2 7 A A M C K 1 5 3 6 C 1 Z P"
   const spacedGstn = gstin.split('').join(' ');
-  const companyName = companySettings?.name || 'KITS Robotics & Automation Pvt.Ltd';
+  const rawCompanyName = companySettings?.name || 'KITS ROBOTICS & AUTOMATION PVT.LTD.';
+  const oldCompanyNames = [
+    'KITS ROBOTICS AND AUTOMATION PVT.LTD.',
+    'KITS Robotics and Automation Pvt.Ltd.',
+    'KITS Robotics & Automation Pvt.Ltd',
+    'KITS Robotics & Automation Pvt. Ltd.',
+    'KITS Robotics and Automation Pvt.Ltd',
+    'KITS ROBOTICS & AUTOMATION PVT. LTD.',
+    'KITS ROBOTICS & AUTOMATION PVT.LTD',
+    'KITS Robotics & Automation',
+    'KITS Robotics & Automation Pvt Ltd'
+  ];
+  const companyName = (!rawCompanyName || oldCompanyNames.includes(rawCompanyName.trim()))
+    ? 'KITS ROBOTICS & AUTOMATION PVT.LTD.'
+    : rawCompanyName;
 
   return (
     <div className="w-full">
       {/* Top Cyan Accent Strip */}
       <div className="h-1.5 w-full bg-[#0284c7] -mt-3 -mx-4 mb-3 sm:-mt-4 sm:-mx-6 sm:mb-4"></div>
 
-      {/* Main Header Row: 3-column balanced grid keeps the company name fixed dead center */}
+      {/* Main Header Row: 3-column balanced grid keeps the company name fixed dead center in one clean line */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center pb-3 w-full">
         {/* Left: Official Isometric Cube Logo & Brand */}
         <div className="flex items-center justify-start shrink-0">
           <KitsLogo className="h-16 sm:h-20 w-auto" src={companySettings?.logoUrl} />
         </div>
 
-        {/* Center: Company Name (Fixed precisely in the center of the document) */}
-        <div className="text-center px-2 sm:px-4 flex justify-center items-center">
-          <h1 className="text-lg sm:text-[21px] font-black tracking-tight text-[#0f245c] font-serif leading-tight">
-            {companyName === 'KITS Robotics & Automation Pvt.Ltd' ? (
-              <>
-                <span>KITS Robotics &amp;</span>
-                <br />
-                <span>Automation Pvt.Ltd</span>
-              </>
-            ) : (
-              companyName
-            )}
+        {/* Center: Company Name (Proper & in One Line) */}
+        <div className="text-center px-1 sm:px-2 flex justify-center items-center">
+          <h1 className="text-[12px] xs:text-[14px] sm:text-[16px] md:text-[18.5px] print:text-[18.5px] font-black tracking-tight text-[#0f245c] font-serif leading-none whitespace-nowrap">
+            {companyName}
           </h1>
         </div>
 
-        {/* Right: Curved GSTN Banner (Double Tone Gradient) */}
+        {/* Right: Curved GSTIN Banner (Double Tone Gradient) */}
         <div className="flex items-center justify-end shrink-0">
           <div className="bg-gradient-to-r from-[#0f245c] to-[#0284c7] text-white text-[9.5px] sm:text-[10px] font-bold py-0.5 px-3 rounded-l-full shadow-xs tracking-wide flex items-center whitespace-nowrap border-l border-y border-white/20">
-            <span>GSTN: {spacedGstn}</span>
+            <span>GSTIN: {spacedGstn}</span>
           </div>
         </div>
       </div>
@@ -55,7 +61,7 @@ export const KitsDocumentHeader = React.memo(function KitsDocumentHeader({ compa
 export const KitsDocumentFooter = React.memo(function KitsDocumentFooter({ companySettings, isSoftware = false }) {
   const addressLine1 = companySettings?.address?.split(',').slice(0, 3).join(',') || 'KITS, 1st floor, Mukta Plaza, KITS Square,';
   const addressLine2 = companySettings?.address?.split(',').slice(3).join(',') || 'Income tax chowk, Gaurakshan Road, Akola-444001';
-  const website = companySettings?.website || 'www.kitstechslutions.com';
+  const website = companySettings?.website || 'www.kitstechsolutions.com';
   const email = companySettings?.email || 'info@kitstechsolutions.com';
   const rawPhone = companySettings?.phone || '9823042432/7385582242';
   const phone = isSoftware

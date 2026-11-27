@@ -39,7 +39,17 @@ function QuotationsList({
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const baseQuotations = useMemo(() => {
-    return quotations.filter(q => 
+    const list = Array.isArray(quotations) ? quotations : [];
+    let hasOtherDoc = false;
+    for (let i = 0; i < list.length; i++) {
+      const q = list[i];
+      if (q && (q.isProforma || q.documentType === 'Proforma Invoice' || q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.isDeliveryChallan || q.documentType === 'Delivery Challan')) {
+        hasOtherDoc = true;
+        break;
+      }
+    }
+    if (!hasOtherDoc) return list;
+    return list.filter(q => 
       !q.isProforma && 
       q.documentType !== 'Proforma Invoice' && 
       !q.isTaxInvoice && 
@@ -197,7 +207,7 @@ function QuotationsList({
             <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
               {searchTerm 
                 ? 'Try adjusting your search criteria.' 
-                : 'Get started by creating your very first professional quotation for KITS Robotics & Automation.'}
+                : 'Get started by creating your very first professional quotation for KITS ROBOTICS & AUTOMATION PVT.LTD.'}
             </p>
             <button
               onClick={onNewQuotation}
