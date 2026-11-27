@@ -694,37 +694,37 @@ function DeliveryChallanManager({
                 return (
                   <div 
                     key={ch.id || ch.challanNo}
-                    className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 p-3 sm:p-3.5"
+                    className="bg-white rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-sm transition-all duration-150 px-3 py-2 sm:px-3.5 sm:py-2.5"
                   >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 lg:gap-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 lg:gap-3">
                       
                       {/* Left Column (32%): Challan No, Consignee Name, Place of Supply, Date */}
-                      <div className="flex items-center space-x-3 min-w-0 lg:w-[32%]">
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-2xs bg-amber-50 text-amber-700 border border-amber-200/80">
-                          <Truck className="w-4 h-4 text-amber-600" />
+                      <div className="flex items-center space-x-2.5 min-w-0 lg:w-[32%]">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 shadow-2xs bg-amber-50 text-amber-700 border border-amber-200/80">
+                          <Truck className="w-3.5 h-3.5 text-amber-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center space-x-1.5">
+                          <div className="flex items-center space-x-1.5 flex-wrap gap-y-0.5">
                             <button
                               type="button"
                               onClick={() => handleViewPreview(ch)}
-                              className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md border border-amber-200/80 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all cursor-pointer hover:underline"
+                              className="font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded border border-amber-200/80 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all cursor-pointer hover:underline"
                               title={`View Delivery Challan ${ch.challanNo || ch.quotationNumber}`}
                             >
                               {ch.challanNo || ch.quotationNumber}
                             </button>
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                            <span className="text-[8.5px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
                               {ch.status || 'Dispatched'}
                             </span>
                           </div>
                           <h4 
                             onClick={() => handleViewPreview(ch)}
-                            className="text-xs sm:text-sm font-bold text-slate-900 truncate mt-0.5 hover:text-blue-600 transition-colors cursor-pointer"
+                            className="text-xs font-bold text-slate-900 truncate hover:text-blue-600 transition-colors cursor-pointer leading-tight mt-0.5"
                             title={ch.clientName}
                           >
                             {ch.clientName || 'Consignee Name Not Set'}
                           </h4>
-                          <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 mt-0.5">
+                          <div className="flex items-center space-x-1 text-[9.5px] text-slate-400 mt-0.5 leading-none">
                             <span className="truncate max-w-[160px]">{ch.placeOfSupply || ch.billingAddress || 'Akola, Maharashtra'}</span>
                             <span>•</span>
                             <span className="font-medium shrink-0">{formatDate(ch.date)}</span>
@@ -733,21 +733,19 @@ function DeliveryChallanManager({
                       </div>
 
                       {/* Center Column (26%): Removal Purpose & Transport Details */}
-                      <div className="flex flex-col justify-center space-y-1 lg:w-[26%] border-t lg:border-t-0 border-slate-100 pt-2 lg:pt-0 text-xs">
-                        <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Removal Purpose</span>
-                          <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200/80 text-[10.5px] font-semibold text-slate-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
-                            <span className="truncate max-w-[220px]">{ch.purpose || 'Installation & Commissioning'}</span>
-                          </span>
-                        </div>
+                      <div className="flex flex-col justify-center space-y-0.5 lg:w-[26%] border-t lg:border-t-0 border-slate-100 pt-1.5 lg:pt-0 text-xs">
+                        <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider block">Removal Purpose</span>
+                        <span className="inline-flex items-center space-x-1.5 px-1.5 py-0.2 rounded bg-slate-50 border border-slate-200/80 text-[10px] font-semibold text-slate-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
+                          <span className="truncate max-w-[220px]">{ch.purpose || 'Installation & Commissioning'}</span>
+                        </span>
                         {ch.projectName && (
-                          <div className="text-[10.5px] font-semibold text-blue-700 truncate max-w-[240px]">
+                          <div className="text-[10px] font-semibold text-blue-700 truncate max-w-[240px]">
                             Project: {ch.projectName}
                           </div>
                         )}
                         {!isDemoModule && (
-                          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10.5px] text-slate-600">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9.5px] text-slate-600">
                             <span>Vehicle: <strong className="font-mono font-bold text-slate-800">{ch.vehicleNo || ch.transporterName || 'Self / Road'}</strong></span>
                             {ch.lrNumber && (
                               <span className="text-slate-500">LR: <strong className="font-mono">{ch.lrNumber}</strong></span>
@@ -757,13 +755,13 @@ function DeliveryChallanManager({
                       </div>
 
                       {/* Center-Right Column (22%): Quantity, Items & Linked Reference */}
-                      <div className="flex flex-col justify-center space-y-1 lg:w-[22%] border-t lg:border-t-0 border-slate-100 pt-2 lg:pt-0 text-xs">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Consignment Cargo</span>
+                      <div className="flex flex-col justify-center space-y-0.5 lg:w-[22%] border-t lg:border-t-0 border-slate-100 pt-1.5 lg:pt-0 text-xs">
+                        <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Consignment Cargo</span>
                         <div className="font-bold text-slate-900 text-xs flex items-center space-x-1.5">
-                          <span className="px-1.5 py-0.2 bg-amber-50 text-amber-800 border border-amber-200/70 rounded-md font-mono text-[10px]">
+                          <span className="px-1.5 py-0.2 bg-amber-50 text-amber-800 border border-amber-200/70 rounded font-mono text-[9.5px]">
                             {totalQty} {totalQty === 1 ? 'Unit' : 'Units'}
                           </span>
-                          <span className="text-slate-500 text-[10.5px]">
+                          <span className="text-slate-500 text-[10px]">
                             ({itemCount} {itemCount === 1 ? 'Item' : 'Items'})
                           </span>
                         </div>
@@ -771,49 +769,51 @@ function DeliveryChallanManager({
                           <button
                             type="button"
                             onClick={() => handleOpenLinkedDocument(ch.linkedDocNumber, ch.linkedDocId)}
-                            className="text-[10.5px] text-emerald-700 font-mono font-semibold flex items-center space-x-1 hover:underline cursor-pointer text-left"
+                            className="text-[10px] text-emerald-700 font-mono font-semibold flex items-center space-x-1 hover:underline cursor-pointer text-left"
                             title={`Open Referenced Document ${ch.linkedDocNumber}`}
                           >
-                            <FileText className="w-3 h-3 shrink-0" />
+                            <FileText className="w-2.5 h-2.5 shrink-0" />
                             <span className="truncate">Ref Inv: {ch.linkedDocNumber}</span>
                           </button>
                         ) : !isDemoModule && ch.customerPoNo ? (
-                          <div className="text-[10.5px] text-slate-500 truncate">
+                          <div className="text-[10px] text-slate-500 truncate">
                             PO: <strong className="font-mono text-slate-700">{ch.customerPoNo}</strong>
                           </div>
                         ) : Array.isArray(ch.items) && ch.items[0]?.name ? (
-                          <div className="text-[10.5px] text-slate-400 truncate max-w-[180px]">
+                          <div className="text-[10px] text-slate-400 truncate max-w-[180px]">
                             {ch.items[0].name}
                           </div>
                         ) : null}
                       </div>
 
                       {/* Far Right Column (20%): Assessable Value / Qty & Action Buttons */}
-                      <div className="flex items-center justify-between lg:flex-col lg:items-end lg:justify-center gap-1.5 border-t lg:border-t-0 border-slate-100 pt-2.5 lg:pt-0 lg:w-[20%] shrink-0">
+                      <div className="flex items-center justify-between lg:flex-col lg:items-end lg:justify-center gap-1 border-t lg:border-t-0 border-slate-100 pt-1.5 lg:pt-0 lg:w-[20%] shrink-0">
                         <div className="lg:text-right">
-                          <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">
+                          <span className="text-slate-400 block text-[8.5px] uppercase font-bold tracking-wider">
                             {(isDemoModule || ch.isDemoChallan || (ch.challanNo && (ch.challanNo.includes('DEMO') || ch.challanNo.includes('DCD')))) ? 'Consignment Qty' : 'Assessable Cargo Value'}
                           </span>
-                          <span className="font-extrabold text-xs sm:text-sm font-mono text-blue-700">
+                          <span className="font-extrabold text-xs sm:text-sm font-mono text-blue-700 block leading-tight">
                             {(isDemoModule || ch.isDemoChallan || (ch.challanNo && (ch.challanNo.includes('DEMO') || ch.challanNo.includes('DCD'))))
                               ? `${ch.totalQuantity || (Array.isArray(ch.items) ? ch.items.reduce((s, i) => s + (Number(i.qty) || 0), 0) : 0)} Units`
                               : formatCurrency(assessableVal)}
                           </span>
                         </div>
 
-                        <div className="flex items-center space-x-1 mt-1 sm:mt-1.5">
+                        <div className="flex items-center space-x-0.5 mt-1">
                           <button
+                            type="button"
                             onClick={() => handleViewPreview(ch)}
-                            className="p-1 sm:p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                             title="View / Print Delivery Challan"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
 
                           <button
+                            type="button"
                             onClick={() => handleStartEdit(ch)}
                             title="Edit Challan"
-                            className="p-1 sm:p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
@@ -829,21 +829,23 @@ function DeliveryChallanManager({
                           )}
 
                           <button
+                            type="button"
                             onClick={() => handleDuplicate(ch)}
                             title="Duplicate Challan"
-                            className="p-1 sm:p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
                           {onDeleteChallan && (
                             <button
+                              type="button"
                               onClick={() => {
                                 if (window.confirm(`Are you sure you want to delete delivery challan ${ch.challanNo || ch.quotationNumber}?`)) {
                                   onDeleteChallan(ch.id);
                                 }
                               }}
                               title="Delete Challan"
-                              className="p-1 sm:p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

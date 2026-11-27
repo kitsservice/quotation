@@ -1494,25 +1494,25 @@ function ProformaManager({
                 return (
                   <div 
                     key={inv.id || inv.quotationNumber}
-                    className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 p-3 sm:p-3.5"
+                    className="bg-white rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-sm transition-all duration-150 px-3 py-2 sm:px-3.5 sm:py-2.5"
                   >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 lg:gap-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 lg:gap-3">
                       
                       {/* Left Column (32%): Ref No, Document Type Badge, Client Name, Location, Date */}
-                      <div className="flex items-center space-x-3 min-w-0 lg:w-[32%]">
-                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-2xs border ${
+                      <div className="flex items-center space-x-2.5 min-w-0 lg:w-[32%]">
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 shadow-2xs border ${
                           isTaxDoc 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' 
                             : 'bg-purple-50 text-purple-700 border-purple-200/80'
                         }`}>
-                          {isTaxDoc ? <Receipt className="w-4 h-4 text-emerald-600" /> : <FileCheck2 className="w-4 h-4 text-purple-600" />}
+                          {isTaxDoc ? <Receipt className="w-3.5 h-3.5 text-emerald-600" /> : <FileCheck2 className="w-3.5 h-3.5 text-purple-600" />}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center space-x-1.5">
+                          <div className="flex items-center space-x-1.5 flex-wrap gap-y-0.5">
                             <button
                               type="button"
                               onClick={() => onViewQuotation(inv)}
-                              className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer hover:underline ${
+                              className={`font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded border transition-all cursor-pointer hover:underline ${
                                 isTaxDoc
                                   ? 'text-emerald-700 bg-emerald-50 border-emerald-200/80 hover:bg-emerald-100'
                                   : 'text-purple-700 bg-purple-50 border-purple-200/80 hover:bg-purple-100'
@@ -1521,7 +1521,7 @@ function ProformaManager({
                             >
                               {inv.quotationNumber || inv.invoiceNo}
                             </button>
-                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border shrink-0 ${
+                            <span className={`text-[8.5px] font-bold px-1.5 py-0.2 rounded-full border shrink-0 ${
                               isTaxDoc
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 : 'bg-purple-50 text-purple-800 border-purple-200'
@@ -1531,12 +1531,12 @@ function ProformaManager({
                           </div>
                           <h4 
                             onClick={() => onViewQuotation(inv)}
-                            className="text-xs sm:text-sm font-bold text-slate-900 truncate mt-0.5 hover:text-blue-600 transition-colors cursor-pointer"
+                            className="text-xs font-bold text-slate-900 truncate hover:text-blue-600 transition-colors cursor-pointer leading-tight mt-0.5"
                             title={inv.clientName}
                           >
                             {inv.clientName || 'Unnamed Customer'}
                           </h4>
-                          <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 mt-0.5">
+                          <div className="flex items-center space-x-1 text-[9.5px] text-slate-400 mt-0.5 leading-none">
                             <span className="truncate max-w-[150px]">{inv.placeOfSupply || inv.billingAddress || 'Akola, Maharashtra'}</span>
                             <span>•</span>
                             <span className="font-medium shrink-0">{formatDate(inv.date)}</span>
@@ -1545,25 +1545,23 @@ function ProformaManager({
                       </div>
 
                       {/* Center Column (26%): Category, References (PO, Quote), Line Items */}
-                      <div className="flex flex-col justify-center space-y-1 lg:w-[26%] border-t lg:border-t-0 border-slate-100 pt-2 lg:pt-0 text-xs">
-                        <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Category & Items</span>
-                          <div className="flex items-center space-x-1.5">
-                            <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold border ${
-                              inv.category === 'Software' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                              inv.category === 'Product' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                              'bg-blue-50 text-blue-700 border-blue-200'
-                            }`}>
-                              {inv.category || 'Automation Work'}
-                            </span>
-                            <span className="text-slate-400 text-[10px]">
-                              {inv.items?.length || 0} item{inv.items?.length === 1 ? '' : 's'}
-                            </span>
-                          </div>
+                      <div className="flex flex-col justify-center space-y-0.5 lg:w-[26%] border-t lg:border-t-0 border-slate-100 pt-1.5 lg:pt-0 text-xs">
+                        <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider block">Category & Items</span>
+                        <div className="flex items-center space-x-1.5">
+                          <span className={`text-[8.5px] px-1.5 py-0.2 rounded font-semibold border ${
+                            inv.category === 'Software' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                            inv.category === 'Product' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
+                            {inv.category || 'Automation Work'}
+                          </span>
+                          <span className="text-slate-400 text-[9.5px]">
+                            {inv.items?.length || 0} item{inv.items?.length === 1 ? '' : 's'}
+                          </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-600">
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[9.5px] text-slate-600 pt-0.5">
                           {inv.customerPoNo && (
-                            <span className="truncate max-w-[150px]">PO: <strong className="font-mono text-slate-800">{inv.customerPoNo}</strong></span>
+                            <span className="truncate max-w-[140px]">PO: <strong className="font-mono text-slate-800">{inv.customerPoNo}</strong></span>
                           )}
                           {inv.linkedQuotationNumber && (
                             <button
@@ -1572,7 +1570,7 @@ function ProformaManager({
                                 e.stopPropagation();
                                 handleOpenLinkedDocument(inv.linkedQuotationNumber, inv.linkedQuotationId);
                               }}
-                              className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200/80 font-mono font-bold text-[10px] transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                              className="inline-flex items-center space-x-0.5 px-1 py-0.2 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200/80 font-mono font-bold text-[9px] transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                               title={`View Referenced Quotation ${inv.linkedQuotationNumber}`}
                             >
                               <Link2 className="w-2.5 h-2.5 text-blue-600 shrink-0" />
@@ -1586,7 +1584,7 @@ function ProformaManager({
                                 e.stopPropagation();
                                 handleOpenLinkedDocument(inv.linkedProformaNumber, inv.linkedProformaId);
                               }}
-                              className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-900 border border-purple-200/80 font-mono font-bold text-[10px] transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                              className="inline-flex items-center space-x-0.5 px-1 py-0.2 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-900 border border-purple-200/80 font-mono font-bold text-[9px] transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                               title={`View Referenced Proforma ${inv.linkedProformaNumber}`}
                             >
                               <FileCheck2 className="w-2.5 h-2.5 text-purple-600 shrink-0" />
@@ -1597,54 +1595,55 @@ function ProformaManager({
                       </div>
 
                       {/* Center-Right Column (22%): Advance / Balance Commercial Terms */}
-                      <div className="flex flex-col justify-center space-y-0.5 lg:w-[22%] border-t lg:border-t-0 border-slate-100 pt-2 lg:pt-0 text-xs">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                      <div className="flex flex-col justify-center space-y-0.5 lg:w-[22%] border-t lg:border-t-0 border-slate-100 pt-1.5 lg:pt-0 text-xs">
+                        <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider block">
                           {isTaxDoc ? 'Payment Settlement' : 'Commercial Terms'}
                         </span>
                         {isTaxDoc ? (
-                          <div className="space-y-0.5">
-                            <div className="text-[10px] sm:text-[11px] text-slate-600">
+                          <div className="space-y-0.2 leading-tight">
+                            <div className="text-[9.5px] sm:text-[10px] text-slate-600">
                               Bal Due: <span className="font-bold text-amber-700 font-mono">{formatCurrency(balanceDue)}</span>
                             </div>
                             {advAmt > 0 && (
-                              <div className="text-[9px] text-slate-400">
+                              <div className="text-[8.5px] text-slate-400">
                                 Adv Paid: <span className="font-mono font-medium text-emerald-700">{formatCurrency(advAmt)}</span>
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div className="space-y-0.5">
-                            <div className="text-[10px] sm:text-[11px] text-slate-700">
+                          <div className="space-y-0.2 leading-tight">
+                            <div className="text-[9.5px] sm:text-[10px] text-slate-700">
                               Advance ({(inv.advancePercent === 50 ? 75 : inv.advancePercent) || 75}%): <span className="font-bold text-emerald-700 font-mono">{formatCurrency(advAmt)}</span>
                             </div>
-                            <div className="text-[9px] text-slate-400">
+                            <div className="text-[8.5px] text-slate-400">
                               Bal on Delivery: <span className="font-mono font-medium">{formatCurrency(balanceDue)}</span>
                             </div>
                           </div>
                         )}
-                        <div className="text-[9px] text-slate-400 flex items-center space-x-1 pt-0.5">
+                        <div className="text-[8.5px] text-slate-400 flex items-center space-x-1">
                           <Clock className="w-2.5 h-2.5" />
                           <span>Valid: {inv.validityDays || 30} days</span>
                         </div>
                       </div>
 
                       {/* Right Column (20%): Grand Total & Actions */}
-                      <div className="flex lg:flex-col items-center lg:items-end justify-between border-t lg:border-t-0 border-slate-100 pt-2 lg:pt-0 shrink-0 lg:w-[20%]">
+                      <div className="flex lg:flex-col items-center lg:items-end justify-between border-t lg:border-t-0 border-slate-100 pt-1.5 lg:pt-0 shrink-0 lg:w-[20%]">
                         <div className="text-left lg:text-right">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Grand Total</span>
-                          <span className="text-sm sm:text-base font-black text-slate-900 font-mono block">
+                          <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider block">Grand Total</span>
+                          <span className="text-xs sm:text-sm font-black text-slate-900 font-mono block leading-tight">
                             {formatCurrency(inv.grandTotal)}
                           </span>
-                          <span className="text-[9px] text-slate-400 block">
+                          <span className="text-[8.5px] text-slate-400 block">
                             Taxable: {formatCurrency(inv.totalTaxable || inv.subtotal)}
                           </span>
                         </div>
 
-                        <div className="flex items-center space-x-1 mt-1 sm:mt-1.5">
+                        <div className="flex items-center space-x-0.5 mt-1">
                           {/* View / Print */}
                           <button
+                            type="button"
                             onClick={() => onViewQuotation(inv)}
-                            className="p-1 sm:p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                             title={`View / Print ${isTaxDoc ? 'Final Invoice' : 'Proforma Invoice'}`}
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -1652,14 +1651,15 @@ function ProformaManager({
 
                           {/* Edit */}
                           <button
+                            type="button"
                             onClick={() => isTaxDoc ? handleEditTaxInvoice(inv) : handleEditProforma(inv)}
-                            className="p-1 sm:p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                             title={`Edit ${isTaxDoc ? 'Final Invoice' : 'Proforma Invoice'}`}
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Generate Further Document (Tax Invoice, Delivery Challan, Demo Challan, Proforma) */}
+                          {/* Generate Further Document */}
                           <DocumentConvertMenu
                             document={inv}
                             onConvert={(doc, targetType) => {
@@ -1675,8 +1675,9 @@ function ProformaManager({
 
                           {/* Share */}
                           <button
+                            type="button"
                             onClick={() => onShareQuotation(inv)}
-                            className="p-1 sm:p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
                             title="Share with Customer"
                           >
                             <Share2 className="w-3.5 h-3.5" />
@@ -1684,12 +1685,13 @@ function ProformaManager({
 
                           {/* Delete */}
                           <button
+                            type="button"
                             onClick={() => {
                               if (window.confirm(`Delete ${isTaxDoc ? 'Final Invoice' : 'Proforma Invoice'} ${inv.quotationNumber}?`)) {
                                 if (onDeleteQuotation) onDeleteQuotation(inv.id);
                               }
                             }}
-                            className="p-1 sm:p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             title="Delete Document"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
