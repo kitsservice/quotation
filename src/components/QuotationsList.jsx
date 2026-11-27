@@ -9,11 +9,11 @@ import {
   Clock, 
   Download,
   FileSpreadsheet,
-  FileCheck2,
   ChevronDown,
   ArrowLeft
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import DocumentConvertMenu from './DocumentConvertMenu';
 
 const STATUS_CONFIG = {
   Draft: { bg: 'bg-slate-100 text-slate-700 border-slate-300', dot: 'bg-slate-500' },
@@ -33,6 +33,7 @@ function QuotationsList({
   onDeleteQuotation,
   onShareQuotation,
   onConvertToProforma,
+  onConvertDocument,
   onNavigateTab
 }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -410,15 +411,19 @@ function QuotationsList({
                             <Edit3 className="w-4 h-4" />
                           </button>
 
-                          {/* Convert / Link to Proforma Invoice */}
-                          {onConvertToProforma && (
-                            <button
-                              onClick={() => onConvertToProforma(quote)}
-                              className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                              title="Generate Linked Proforma Invoice"
-                            >
-                              <FileCheck2 className="w-4 h-4" />
-                            </button>
+                          {/* Convert to Further Document */}
+                          {(onConvertDocument || onConvertToProforma) && (
+                            <DocumentConvertMenu
+                              document={quote}
+                              onConvert={(doc, type) => {
+                                if (onConvertDocument) {
+                                  onConvertDocument(doc, type);
+                                } else if (onConvertToProforma) {
+                                  onConvertToProforma(doc);
+                                }
+                              }}
+                              variant="icon"
+                            />
                           )}
 
                           {/* Share via WhatsApp/Email */}

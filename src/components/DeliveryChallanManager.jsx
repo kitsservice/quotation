@@ -43,12 +43,41 @@ export const DEFAULT_DEMO_TERMS = `1. The above-mentioned materials are supplied
 3. All materials listed above remain the property of KITS Robotics and Automation Pvt. Ltd. and are to be returned in good working condition upon completion of the demonstration period.
 4. The receiving party shall take reasonable care of the equipment during the demonstration period.`;
 
-function createDefaultFormData(quotations, isDemo = false) {
+function createDefaultFormData(quotations, isDemo = false, sourceDoc = null) {
   const todayStr = new Date().toISOString().split('T')[0];
   const prefix = isDemo ? 'KITS/DCD' : 'KITS/DC';
   const challanNo = isDemo 
     ? generateNextDemoChallanNumber(quotations, prefix)
     : generateNextDeliveryChallanNumber(quotations, prefix);
+
+  const mappedItems = Array.isArray(sourceDoc?.items) && sourceDoc.items.length > 0
+    ? sourceDoc.items.map((it, idx) => ({
+        id: it.id || `item-${idx + 1}`,
+        name: it.title || it.name || '',
+        description: it.description || '',
+        hsn: it.hsnCode || it.hsn || '',
+        qty: Number(it.qty) || 1,
+        unit: it.unit || 'Nos',
+        rate: Number(it.unitPrice || it.rate) || 0,
+        amount: (Number(it.qty) || 1) * (Number(it.unitPrice || it.rate) || 0)
+      }))
+    : [
+        {
+          id: 'item-1',
+          name: '',
+          description: '',
+          hsn: '',
+          qty: 1,
+          unit: 'Nos',
+          rate: 0,
+          amount: 0
+        }
+      ];
+
+  const docNumber = sourceDoc?.quotationNumber || sourceDoc?.invoiceNo || '';
+  const docType = sourceDoc 
+    ? (sourceDoc.documentType || (sourceDoc.isTaxInvoice ? 'Tax Invoice' : sourceDoc.isProforma ? 'Proforma Invoice' : 'Quotation'))
+    : '';
 
   return {
     id: '',
@@ -56,45 +85,34 @@ function createDefaultFormData(quotations, isDemo = false) {
     date: todayStr,
     dispatchTime: '',
     purpose: isDemo ? 'Demonstration / Exhibition' : 'Installation & Commissioning at Site',
-    projectName: '',
+    projectName: sourceDoc?.subject || '',
     isDemoChallan: Boolean(isDemo),
-    linkedDocType: '',
-    linkedDocId: '',
-    linkedDocNumber: '',
-    customerPoNo: '',
-    customerPoDate: '',
-    clientId: '',
-    clientName: '',
-    billingAddress: '',
-    clientGstin: '',
-    clientState: 'Maharashtra',
-    placeOfSupply: 'Akola Maharashtra',
-    shipToSameAsBillTo: true,
-    shippingAddress: '',
-    contactPerson: '',
-    contactPhone: '',
-    transportMode: 'Road',
-    vehicleNo: '',
-    transporterName: '',
-    lrNumber: '',
-    lrDate: todayStr,
-    ewayBillNo: '',
+    linkedDocType: docType,
+    linkedDocId: sourceDoc?.id || '',
+    linkedDocNumber: docNumber,
+    customerPoNo: sourceDoc?.customerPoNo || '',
+    customerPoDate: sourceDoc?.customerPoDate || '',
+    clientId: sourceDoc?.clientId || '',
+    clientName: sourceDoc?.clientName || sourceDoc?.customerName || '',
+    billingAddress: sourceDoc?.billingAddress || sourceDoc?.address || '',
+    clientGstin: sourceDoc?.clientGstin || sourceDoc?.gstin || '',
+    clientState: sourceDoc?.clientState || 'Maharashtra',
+    placeOfSupply: sourceDoc?.placeOfSupply || 'Akola Maharashtra',
+    shipToSameAsBillTo: sourceDoc?.shipToSameAsBillTo !== undefined ? sourceDoc.shipToSameAsBillTo : true,
+    shippingAddress: sourceDoc?.shippingAddress || sourceDoc?.billingAddress || '',
+    contactPerson: sourceDoc?.contactPerson || '',
+    contactPhone: sourceDoc?.contactPhone || '',
+    transportMode: sourceDoc?.modeOfTransport?.includes('Courier') ? 'Courier' : 'Road',
+    vehicleNo: sourceDoc?.vehicleNo || '',
+    transporterName: sourceDoc?.transporterName || '',
+    lrNumber: sourceDoc?.lrNo || sourceDoc?.lrNumber || '',
+    lrDate: sourceDoc?.lrDate || todayStr,
+    ewayBillNo: sourceDoc?.ewayBillNo || '',
     status: isDemo ? 'Demo Dispatched' : 'Dispatched',
     remarks: isDemo
       ? DEFAULT_DEMO_TERMS
       : '1. Goods dispatched strictly for the purpose mentioned above under Rule 55 of CGST Rules, 2017.\n2. This is NOT A SALE INVOICE. No financial sale is affected through this delivery challan.\n3. Consignment to be verified and acknowledged by the receiver upon delivery.',
-    items: [
-      {
-        id: 'item-1',
-        name: '',
-        description: '',
-        hsn: '',
-        qty: 1,
-        unit: 'Nos',
-        rate: 0,
-        amount: 0
-      }
-    ]
+    items: mappedItems
   };
 }
 
@@ -140,13 +158,14 @@ function DeliveryChallanManager({
   quotations = [],
   companySettings = {},
   initialMode = 'list',
+  initialSourceDoc = null,
   isDemoModule = false,
   onSaveChallan,
   onDeleteChallan,
   onNavigateTab,
   onViewQuotation
 }) {
-  const [viewMode, setViewMode] = useState(initialMode || 'list'); // 'list' | 'create' | 'preview'
+  const [viewMode, setViewMode] = useState(() => initialSourceDoc ? 'create' : (initialMode || 'list')); // 'list' | 'create' | 'preview'
   const [selectedChallan, setSelectedChallan] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPurpose, setFilterPurpose] = useState('all');
@@ -216,7 +235,7 @@ function DeliveryChallanManager({
   }, [deliveryChallans, filterPurpose, searchQuery]);
 
   // Form State
-  const [formData, setFormData] = useState(() => createDefaultFormData(quotations, isDemoModule));
+  const [formData, setFormData] = useState(() => createDefaultFormData(quotations, isDemoModule, initialSourceDoc));
 
   // Determine if currently working with a Demo Delivery Challan
   const isCurrentDemo = Boolean(isDemoModule || formData?.isDemoChallan || formData?.purpose === 'Demonstration / Exhibition' || (formData?.challanNo && (formData.challanNo.includes('DEMO') || formData.challanNo.includes('DCD'))));

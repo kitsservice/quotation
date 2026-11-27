@@ -172,6 +172,8 @@ export default function App() {
   const [invoicesInitialMode, setInvoicesInitialMode] = useState('cards');
   const [challanInitialMode, setChallanInitialMode] = useState('list');
   const [demoChallanInitialMode, setDemoChallanInitialMode] = useState('list');
+  const [challanSourceDoc, setChallanSourceDoc] = useState(null);
+  const [demoChallanSourceDoc, setDemoChallanSourceDoc] = useState(null);
   const [proformaSourceQuote, setProformaSourceQuote] = useState(() => {
     const list = getLocalQuotations();
     if (typeof window !== 'undefined') {
@@ -458,9 +460,11 @@ export default function App() {
     }
     if (tab === 'challans') {
       setChallanInitialMode('list');
+      setChallanSourceDoc(null);
     }
     if (tab === 'demo-challans') {
       setDemoChallanInitialMode('list');
+      setDemoChallanSourceDoc(null);
     }
     setActiveTab(prev => {
       if (prev !== tab) {
@@ -555,9 +559,39 @@ export default function App() {
 
   const handleConvertToProforma = useCallback((quote) => {
     setProformaSourceQuote(quote);
+    setProformaInitialMode('create');
     setActiveTab('proforma');
     showToast(`Quotation ${quote.quotationNumber} linked to Proforma Invoice.`);
   }, [showToast]);
+
+  const handleConvertToTaxInvoice = useCallback((quote) => {
+    setProformaSourceQuote(quote);
+    setInvoicesInitialMode('create');
+    setActiveTab('invoices');
+    showToast(`Quotation ${quote.quotationNumber} linked to Final Tax Invoice.`);
+  }, [showToast]);
+
+  const handleConvertToChallan = useCallback((quote) => {
+    setChallanSourceDoc(quote);
+    setChallanInitialMode('create');
+    setActiveTab('challans');
+    showToast(`Quotation ${quote.quotationNumber} linked to Delivery Challan.`);
+  }, [showToast]);
+
+  const handleConvertToDemoChallan = useCallback((quote) => {
+    setDemoChallanSourceDoc(quote);
+    setDemoChallanInitialMode('create');
+    setActiveTab('demo-challans');
+    showToast(`Quotation ${quote.quotationNumber} linked to Demo Delivery Challan.`);
+  }, [showToast]);
+
+  const handleConvertDocument = useCallback((doc, targetType) => {
+    if (!doc) return;
+    if (targetType === 'proforma') handleConvertToProforma(doc);
+    else if (targetType === 'tax-invoice') handleConvertToTaxInvoice(doc);
+    else if (targetType === 'challan') handleConvertToChallan(doc);
+    else if (targetType === 'demo-challan') handleConvertToDemoChallan(doc);
+  }, [handleConvertToProforma, handleConvertToTaxInvoice, handleConvertToChallan, handleConvertToDemoChallan]);
 
   const handleSaveQuotation = useCallback(async (quoteData) => {
     const saved = await saveQuotation(quoteData);
@@ -757,6 +791,7 @@ export default function App() {
                   onShareQuotation={(q) => setShareQuotation(q)}
                   onNavigateTab={(tab) => setActiveTab(tab)}
                   onConvertToProforma={handleConvertToProforma}
+                  onConvertDocument={handleConvertDocument}
                 />
               )}
 
@@ -771,6 +806,7 @@ export default function App() {
                   onDeleteQuotation={handleDeleteQuotation}
                   onShareQuotation={(q) => setShareQuotation(q)}
                   onConvertToProforma={handleConvertToProforma}
+                  onConvertDocument={handleConvertDocument}
                   onNavigateTab={handleSelectTab}
                 />
               )}
@@ -877,6 +913,7 @@ export default function App() {
                     }}
                     onShare={() => setShareQuotation(currentQuotation)}
                     onConvertToProforma={handleConvertToProforma}
+                    onConvertDocument={handleConvertDocument}
                   />
                 ) : (
                   <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-4 max-w-lg mx-auto shadow-xs">
@@ -967,14 +1004,16 @@ export default function App() {
               {/* SCREEN 4C: DELIVERY CHALLANS (Rule 55 CGST) */}
               {activeTab === 'challans' && (
                 <DeliveryChallanManager
-                  key={`challans-view-${challanInitialMode}`}
+                  key={`challans-view-${challanInitialMode}-${challanSourceDoc?.id || 'none'}`}
                   initialMode={challanInitialMode}
+                  initialSourceDoc={challanSourceDoc}
                   clients={clients}
                   quotations={quotations}
                   companySettings={companySettings}
                   onSaveChallan={(saved) => {
                     handleSaveQuotation(saved);
                     setChallanInitialMode('list');
+                    setChallanSourceDoc(null);
                     showToast('Delivery Challan saved successfully.');
                   }}
                   onDeleteChallan={(id) => {
@@ -988,8 +1027,9 @@ export default function App() {
               {/* SCREEN 4D: DEMO DELIVERY CHALLAN (Rule 55 CGST) */}
               {activeTab === 'demo-challans' && (
                 <DeliveryChallanManager
-                  key={`demo-challans-view-${demoChallanInitialMode}`}
+                  key={`demo-challans-view-${demoChallanInitialMode}-${demoChallanSourceDoc?.id || 'none'}`}
                   initialMode={demoChallanInitialMode}
+                  initialSourceDoc={demoChallanSourceDoc}
                   isDemoModule={true}
                   clients={clients}
                   quotations={quotations}
@@ -997,6 +1037,7 @@ export default function App() {
                   onSaveChallan={(saved) => {
                     handleSaveQuotation(saved);
                     setDemoChallanInitialMode('list');
+                    setDemoChallanSourceDoc(null);
                     showToast('Demo Delivery Challan saved successfully.');
                   }}
                   onDeleteChallan={(id) => {

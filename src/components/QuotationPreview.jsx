@@ -5,7 +5,6 @@ import {
   Download, 
   Share2, 
   Edit3, 
-  FileCheck2,
   CreditCard
 } from 'lucide-react';
 import { formatNumber, formatDate } from '../utils/formatters';
@@ -13,6 +12,7 @@ import { numberToIndianWords } from '../utils/numberToWords';
 import { exportToPdf, printDocument } from '../services/pdfGenerator';
 import { KitsDocumentHeader, KitsDocumentFooter } from './KitsHeaderFooter';
 import { HARDWARE_DEFAULT_EXCLUSIONS, SOFTWARE_DEFAULT_EXCLUSIONS, SOFTWARE_DEFAULT_TERMS } from '../utils/gstHelper';
+import DocumentConvertMenu from './DocumentConvertMenu';
 
 const parsedTermsCache = new Map();
 
@@ -157,7 +157,8 @@ function QuotationPreview({
   onBack,
   onEdit,
   onShare,
-  onConvertToProforma
+  onConvertToProforma,
+  onConvertDocument
 }) {
   const [isExporting, setIsExporting] = useState(false);
   const printAreaRef = useRef(null);
@@ -343,15 +344,18 @@ function QuotationPreview({
             <span>Share</span>
           </button>
 
-          {!isProformaDoc && !isTaxInvoiceDoc && onConvertToProforma && (
-            <button
-              onClick={() => onConvertToProforma(safeQuotation)}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-xs cursor-pointer"
-              title="Generate Linked Proforma Invoice"
-            >
-              <FileCheck2 className="w-3.5 h-3.5" />
-              <span>Proforma</span>
-            </button>
+          {(onConvertDocument || onConvertToProforma) && (
+            <DocumentConvertMenu
+              document={safeQuotation}
+              onConvert={(doc, type) => {
+                if (onConvertDocument) {
+                  onConvertDocument(doc, type);
+                } else if (onConvertToProforma) {
+                  onConvertToProforma(doc);
+                }
+              }}
+              variant="button"
+            />
           )}
 
           <button

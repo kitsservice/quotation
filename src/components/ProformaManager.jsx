@@ -130,8 +130,14 @@ function ProformaManager({
   onDeleteQuotation,
   onNavigateTab
 }) {
-  const [viewMode, setViewMode] = useState(() => initialQuotation ? 'create' : (initialMode || 'cards'));
-  const [taxInvoiceSource, setTaxInvoiceSource] = useState(null);
+  const [viewMode, setViewMode] = useState(() => {
+    if (defaultFilter === 'tax' && initialQuotation) return 'tax-invoice';
+    return initialQuotation ? 'create' : (initialMode || 'cards');
+  });
+  const [taxInvoiceSource, setTaxInvoiceSource] = useState(() => {
+    if (defaultFilter === 'tax' && initialQuotation) return initialQuotation;
+    return null;
+  });
   const invoiceFilter = defaultFilter || 'all'; // 'all' | 'tax' | 'proforma'
   const [searchTerm, setSearchTerm] = useState('');
 
