@@ -37,6 +37,7 @@ function QuotationsList({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('All');
 
   const baseQuotations = useMemo(() => {
     const list = Array.isArray(quotations) ? quotations : [];
@@ -70,6 +71,22 @@ function QuotationsList({
     return { all: baseQuotations.length, automation, product, software };
   }, [baseQuotations]);
 
+  const statusCounts = useMemo(() => {
+    let all = baseQuotations.length;
+    let draft = 0;
+    let underReview = 0;
+    let approved = 0;
+    let invoiced = 0;
+    for (let i = 0; i < baseQuotations.length; i++) {
+      const s = baseQuotations[i].status || 'Draft';
+      if (s === 'Draft') draft++;
+      else if (s === 'Under Review') underReview++;
+      else if (s === 'Approved') approved++;
+      else if (s === 'Invoiced') invoiced++;
+    }
+    return { all, draft, underReview, approved, invoiced };
+  }, [baseQuotations]);
+
   const filteredQuotations = useMemo(() => {
     const s = (searchTerm || searchQuery || '').trim().toLowerCase();
     return baseQuotations.filter(q => {
@@ -77,16 +94,21 @@ function QuotationsList({
       const matchesCategory = selectedCategory === 'All' || cat === selectedCategory;
       if (!matchesCategory) return false;
 
+      const st = q.status || 'Draft';
+      const matchesStatus = selectedStatus === 'All' || st === selectedStatus;
+      if (!matchesStatus) return false;
+
       if (!s) return true;
       return (
         (q.quotationNumber || '').toLowerCase().includes(s) ||
         (q.clientName || '').toLowerCase().includes(s) ||
         (q.subject || '').toLowerCase().includes(s) ||
         (q.contactPerson || '').toLowerCase().includes(s) ||
-        cat.toLowerCase().includes(s)
+        cat.toLowerCase().includes(s) ||
+        st.toLowerCase().includes(s)
       );
     });
-  }, [baseQuotations, searchTerm, searchQuery, selectedCategory]);
+  }, [baseQuotations, searchTerm, searchQuery, selectedCategory, selectedStatus]);
 
   // Export summary to CSV
   const handleExportCsv = () => {
@@ -162,37 +184,101 @@ function QuotationsList({
         </div>
       </div>
 
-      {/* Category Dropdown & Search Header */}
-      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        
-        {/* Category Dropdown Filter */}
-        <div className="flex items-center space-x-2">
-          <span className="text-xs font-semibold text-slate-500">Category:</span>
-          <div className="relative">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="pl-3 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none cursor-pointer appearance-none focus:border-blue-500 focus:bg-white transition-all"
-            >
-              <option value="All">All Categories ({categoryCounts.all})</option>
-              <option value="Automation Work">Automation Work ({categoryCounts.automation})</option>
-              <option value="Product">Product ({categoryCounts.product})</option>
-              <option value="Software">Software ({categoryCounts.software})</option>
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+      {/* Category Dropdown, Status Filter & Search Header */}
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Category Dropdown Filter */}
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-semibold text-slate-500">Category:</span>
+            <div className="relative">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="pl-3 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none cursor-pointer appearance-none focus:border-blue-500 focus:bg-white transition-all"
+              >
+                <option value="All">All Categories ({categoryCounts.all})</option>
+                <option value="Automation Work">Automation Work ({categoryCounts.automation})</option>
+                <option value="Product">Product ({categoryCounts.product})</option>
+                <option value="Software">Software ({categoryCounts.software})</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative w-full sm:w-72">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search ref, client, category, subject..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium"
+            />
           </div>
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-full sm:w-72">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search ref, client, category, subject..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium"
-          />
+        {/* Quick Status Filter Tabs including DRAFTS */}
+        <div className="flex items-center space-x-1.5 overflow-x-auto pt-2 border-t border-slate-100 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('All')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              selectedStatus === 'All'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+            }`}
+          >
+            All Statuses ({statusCounts.all})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('Draft')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+              selectedStatus === 'Draft'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-slate-400 inline-block"></span>
+            <span>Drafts ({statusCounts.draft})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('Under Review')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+              selectedStatus === 'Under Review'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-amber-50 hover:bg-amber-100 text-amber-700'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+            <span>Under Review ({statusCounts.underReview})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('Approved')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+              selectedStatus === 'Approved'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+            <span>Approved ({statusCounts.approved})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('Invoiced')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+              selectedStatus === 'Invoiced'
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'bg-purple-50 hover:bg-purple-100 text-purple-700'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-purple-500 inline-block"></span>
+            <span>Invoiced ({statusCounts.invoiced})</span>
+          </button>
         </div>
       </div>
 
