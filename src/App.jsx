@@ -20,7 +20,8 @@ import {
   saveCompanySettings,
   importDatabaseBackup,
   subscribeToQuotations,
-  subscribeToClients
+  subscribeToClients,
+  subscribeToProducts
 } from './services/db';
 import { 
   CheckCircle2, 
@@ -356,14 +357,20 @@ export default function App() {
   // Multi-laptop continuous synchronization: real-time Firestore listeners + focus re-sync
   useEffect(() => {
     const unsubQuotes = subscribeToQuotations((newQuotes) => {
-      if (Array.isArray(newQuotes) && newQuotes.length > 0) {
+      if (Array.isArray(newQuotes)) {
         setQuotations(newQuotes);
       }
     });
 
     const unsubClients = subscribeToClients((newClients) => {
-      if (Array.isArray(newClients) && newClients.length > 0) {
+      if (Array.isArray(newClients)) {
         setClients(newClients);
+      }
+    });
+
+    const unsubProducts = subscribeToProducts((newProducts) => {
+      if (Array.isArray(newProducts)) {
+        setProducts(newProducts);
       }
     });
 
@@ -381,6 +388,7 @@ export default function App() {
     return () => {
       unsubQuotes();
       unsubClients();
+      unsubProducts();
       window.removeEventListener('focus', handleSyncTrigger);
       window.removeEventListener('online', handleSyncTrigger);
       clearInterval(timer);
@@ -530,8 +538,8 @@ export default function App() {
     setActiveTab('preview');
   }, [activeTab]);
 
-  const handleDeleteQuotation = useCallback(async (id) => {
-    if (window.confirm('Are you sure you want to delete this document?')) {
+  const handleDeleteQuotation = useCallback(async (id, skipConfirm = false) => {
+    if (skipConfirm || window.confirm('Are you sure you want to delete this document?')) {
       await deleteQuotation(id);
       setQuotations(prev => prev.filter(q => q.id !== id));
       setCurrentQuotation(curr => {
@@ -656,8 +664,8 @@ export default function App() {
     showToast(`Client "${saved.companyName}" saved.`);
   }, [showToast]);
 
-  const handleDeleteClient = useCallback(async (id) => {
-    if (window.confirm('Are you sure you want to delete this client?')) {
+  const handleDeleteClient = useCallback(async (id, skipConfirm = false) => {
+    if (skipConfirm || window.confirm('Are you sure you want to delete this client?')) {
       await deleteClient(id);
       setClients(prev => prev.filter(c => c.id !== id));
       showToast('Client removed from directory.');
@@ -679,8 +687,8 @@ export default function App() {
     showToast(`Item "${saved.name}" saved to catalog.`);
   }, [showToast]);
 
-  const handleDeleteProduct = useCallback(async (id) => {
-    if (window.confirm('Are you sure you want to delete this catalog item?')) {
+  const handleDeleteProduct = useCallback(async (id, skipConfirm = false) => {
+    if (skipConfirm || window.confirm('Are you sure you want to delete this catalog item?')) {
       await deleteProduct(id);
       setProducts(prev => prev.filter(p => p.id !== id));
       showToast('Catalog item removed.');
@@ -923,7 +931,7 @@ export default function App() {
                   }}
                   onViewQuotation={handleViewQuotation}
                   onShareQuotation={(q) => setShareQuotation(q)}
-                  onDeleteQuotation={handleDeleteQuotation}
+                  onDeleteQuotation={(id) => handleDeleteQuotation(id, true)}
                   onNavigateTab={(tab) => setActiveTab(tab)}
                 />
               )}
@@ -951,7 +959,7 @@ export default function App() {
                   }}
                   onViewQuotation={handleViewQuotation}
                   onShareQuotation={(q) => setShareQuotation(q)}
-                  onDeleteQuotation={handleDeleteQuotation}
+                  onDeleteQuotation={(id) => handleDeleteQuotation(id, true)}
                   onNavigateTab={(tab) => setActiveTab(tab)}
                 />
               )}
@@ -970,8 +978,7 @@ export default function App() {
                     showToast('Delivery Challan saved successfully.');
                   }}
                   onDeleteChallan={(id) => {
-                    handleDeleteQuotation(id);
-                    showToast('Delivery Challan removed.');
+                    handleDeleteQuotation(id, true);
                   }}
                   onNavigateTab={(tab) => setActiveTab(tab)}
                   onViewQuotation={handleViewQuotation}
@@ -993,8 +1000,7 @@ export default function App() {
                     showToast('Demo Delivery Challan saved successfully.');
                   }}
                   onDeleteChallan={(id) => {
-                    handleDeleteQuotation(id);
-                    showToast('Demo Delivery Challan removed.');
+                    handleDeleteQuotation(id, true);
                   }}
                   onNavigateTab={(tab) => setActiveTab(tab)}
                   onViewQuotation={handleViewQuotation}
@@ -1008,7 +1014,7 @@ export default function App() {
                   quotations={quotations}
                   searchQuery={deferredSearchQuery}
                   onSaveClient={handleSaveClient}
-                  onDeleteClient={handleDeleteClient}
+                  onDeleteClient={(id) => handleDeleteClient(id, true)}
                   onViewQuotation={handleViewQuotation}
                   onNavigateTab={handleSelectTab}
                 />

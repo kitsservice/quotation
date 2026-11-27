@@ -10,7 +10,9 @@ export const LOCAL_STORAGE_KEYS = {
   QUOTATIONS: 'kits_quotations_data',
   CLIENTS: 'kits_clients_data',
   PRODUCTS: 'kits_products_data',
-  SETTINGS: 'kits_company_settings'
+  SETTINGS: 'kits_company_settings',
+  DELETED_IDS: 'kits_deleted_record_ids',
+  SYNCED_IDS: 'kits_synced_record_ids'
 };
 
 // ==================== IN-MEMORY HIGH PERFORMANCE CACHE ====================
@@ -43,6 +45,104 @@ function withTimeout(promise, ms = 10000) {
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase connection timeout')), ms))
   ]);
+}
+
+// ==================== DELETION TOMBSTONES & SYNC STATE TRACKING ====================
+
+export function getDeletedIds() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(LOCAL_STORAGE_KEYS.DELETED_IDS) : null;
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr);
+    }
+  } catch (e) {
+    console.warn('Error reading deleted IDs:', e);
+  }
+  return new Set();
+}
+
+export function markAsDeleted(id) {
+  if (!id) return;
+  try {
+    const deletedSet = getDeletedIds();
+    deletedSet.add(id);
+    const arr = Array.from(deletedSet).slice(-2000);
+    localStorage.setItem(LOCAL_STORAGE_KEYS.DELETED_IDS, JSON.stringify(arr));
+  } catch (e) {
+    console.warn('Error saving deleted ID:', e);
+  }
+}
+
+export function unmarkDeleted(id) {
+  if (!id) return;
+  try {
+    const deletedSet = getDeletedIds();
+    if (deletedSet.has(id)) {
+      deletedSet.delete(id);
+      localStorage.setItem(LOCAL_STORAGE_KEYS.DELETED_IDS, JSON.stringify(Array.from(deletedSet)));
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function isDeleted(id) {
+  if (!id) return false;
+  return getDeletedIds().has(id);
+}
+
+export function getSyncedIds() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(LOCAL_STORAGE_KEYS.SYNCED_IDS) : null;
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr);
+    }
+  } catch (e) {
+    console.warn('Error reading synced IDs:', e);
+  }
+  return new Set();
+}
+
+export function markAsSynced(idOrIds) {
+  try {
+    const syncedSet = getSyncedIds();
+    if (Array.isArray(idOrIds)) {
+      idOrIds.forEach(id => { if (id) syncedSet.add(id); });
+    } else if (idOrIds) {
+      syncedSet.add(idOrIds);
+    }
+    const arr = Array.from(syncedSet).slice(-5000);
+    localStorage.setItem(LOCAL_STORAGE_KEYS.SYNCED_IDS, JSON.stringify(arr));
+  } catch (e) {
+    console.warn('Error saving synced IDs:', e);
+  }
+}
+
+// Background helper to fetch cloud tombstones from Firestore so deletions sync across all devices
+async function syncDeletedRecordsFromCloud(db, getOps) {
+  try {
+    const { collection, getDocs } = await getOps();
+    const snap = await withTimeout(getDocs(collection(db, 'deleted_records')), 6000);
+    const cloudDeleted = [];
+    snap.forEach(d => cloudDeleted.push(d.id));
+    if (cloudDeleted.length > 0) {
+      const localDeleted = getDeletedIds();
+      let changed = false;
+      cloudDeleted.forEach(id => {
+        if (!localDeleted.has(id)) {
+          localDeleted.add(id);
+          changed = true;
+        }
+      });
+      if (changed) {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.DELETED_IDS, JSON.stringify(Array.from(localDeleted).slice(-2000)));
+      }
+    }
+  } catch {
+    // Non-blocking fallback
+  }
 }
 
 // Seed LocalStorage with official KITS Akola settings and clean blank slate
@@ -88,8 +188,9 @@ initializeLocalStorage();
 // ==================== INSTANT SYNCHRONOUS READS WITH IN-MEMORY CACHE ====================
 
 export function getLocalQuotations() {
+  const deletedIds = getDeletedIds();
   if (cachedQuotations !== null) {
-    return cachedQuotations;
+    return cachedQuotations.filter(q => q && q.id && !deletedIds.has(q.id));
   }
 
   try {
@@ -98,7 +199,7 @@ export function getLocalQuotations() {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         parsed.sort((a, b) => new Date((b && (b.updatedAt || b.date)) || 0) - new Date((a && (a.updatedAt || a.date)) || 0));
-        cachedQuotations = parsed.filter(Boolean);
+        cachedQuotations = parsed.filter(q => q && q.id && !deletedIds.has(q.id));
         return cachedQuotations;
       }
     }
@@ -110,8 +211,9 @@ export function getLocalQuotations() {
 }
 
 export function getLocalClients() {
+  const deletedIds = getDeletedIds();
   if (cachedClients !== null) {
-    return cachedClients;
+    return cachedClients.filter(c => c && c.id && !deletedIds.has(c.id));
   }
 
   try {
@@ -124,7 +226,7 @@ export function getLocalClients() {
         const seen = new Set();
         for (let i = 0; i < parsed.length; i++) {
           const c = parsed[i];
-          if (!c) continue;
+          if (!c || !c.id || deletedIds.has(c.id)) continue;
           const key = (c.companyName || '').trim().toLowerCase();
           if (!key) continue;
           if (!seen.has(key)) {
@@ -144,8 +246,9 @@ export function getLocalClients() {
 }
 
 export function getLocalProducts() {
+  const deletedIds = getDeletedIds();
   if (cachedProducts !== null) {
-    return cachedProducts;
+    return cachedProducts.filter(p => p && p.id && !deletedIds.has(p.id));
   }
 
   try {
@@ -153,7 +256,7 @@ export function getLocalProducts() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        cachedProducts = parsed;
+        cachedProducts = parsed.filter(p => p && p.id && !deletedIds.has(p.id));
         return cachedProducts;
       }
     }
@@ -437,32 +540,46 @@ export async function fetchQuotations() {
       const db = await getDbInstance();
       if (db) {
         const { collection, getDocs, doc, setDoc } = await getFirestoreOps();
+        await syncDeletedRecordsFromCloud(db, getFirestoreOps);
+
         const querySnapshot = await withTimeout(getDocs(collection(db, 'quotations')), 10000);
         const cloudList = [];
         querySnapshot.forEach((docSnap) => {
           cloudList.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        // 1. Merge cloud and local data
-        const mergedMap = new Map();
-        (localList || []).forEach(item => {
-          if (item && item.id) mergedMap.set(item.id, item);
+        const deletedIds = getDeletedIds();
+        const activeCloudList = cloudList.filter(c => c && c.id && !deletedIds.has(c.id));
+        markAsSynced(activeCloudList.map(c => c.id));
+        const syncedIds = getSyncedIds();
+        const cloudIds = new Set(activeCloudList.map(c => c.id));
+
+        // Purge items from localList if they were deleted or were previously synced to cloud and are now absent
+        const validLocalList = (localList || []).filter(item => {
+          if (!item || !item.id) return false;
+          if (deletedIds.has(item.id)) return false;
+          if (syncedIds.has(item.id) && !cloudIds.has(item.id)) return false; // Was deleted from cloud!
+          return true;
         });
-        cloudList.forEach(item => {
-          if (item && item.id) {
-            const local = mergedMap.get(item.id);
-            if (!local || new Date(item.updatedAt || 0) >= new Date(local.updatedAt || 0)) {
-              mergedMap.set(item.id, item);
-            }
+
+        // 1. Merge cloud and valid local data
+        const mergedMap = new Map();
+        validLocalList.forEach(item => {
+          mergedMap.set(item.id, item);
+        });
+        activeCloudList.forEach(item => {
+          const local = mergedMap.get(item.id);
+          if (!local || new Date(item.updatedAt || 0) >= new Date(local.updatedAt || 0)) {
+            mergedMap.set(item.id, item);
           }
         });
 
-        // 2. AUTO-SYNC: If any local quotation is NOT in cloud, push it to cloud automatically
-        const cloudIds = new Set(cloudList.map(c => c.id));
-        const missingInCloud = (localList || []).filter(l => l && l.id && !cloudIds.has(l.id));
-        if (missingInCloud.length > 0) {
-          Promise.all(missingInCloud.map(item => 
+        // 2. AUTO-SYNC: ONLY upload local items that are genuinely new (never synced and not deleted)
+        const newUnsyncedLocal = validLocalList.filter(l => !cloudIds.has(l.id) && !syncedIds.has(l.id));
+        if (newUnsyncedLocal.length > 0) {
+          Promise.all(newUnsyncedLocal.map(item => 
             setDoc(doc(db, 'quotations', item.id), sanitizeForFirestore(item), { merge: true })
+              .then(() => markAsSynced(item.id))
           )).catch(e => console.warn('Background quotation auto-upload error:', e));
         }
 
@@ -477,11 +594,13 @@ export async function fetchQuotations() {
     }
   }
 
-  return localList;
+  const deletedIds = getDeletedIds();
+  return (localList || []).filter(q => q && q.id && !deletedIds.has(q.id));
 }
 
 export async function saveQuotation(quotation) {
   const id = quotation.id || 'quot-' + Date.now();
+  unmarkDeleted(id);
   const now = new Date().toISOString();
   const quoteData = {
     ...quotation,
@@ -490,14 +609,8 @@ export async function saveQuotation(quotation) {
     createdAt: quotation.createdAt || now
   };
 
-  const localQuotes = [...getLocalQuotations()];
-  const existingIdx = localQuotes.findIndex(q => q.id === id);
-  if (existingIdx >= 0) {
-    localQuotes[existingIdx] = quoteData;
-  } else {
-    localQuotes.unshift(quoteData);
-  }
-  
+  const localQuotes = [...getLocalQuotations().filter(q => q.id !== id)];
+  localQuotes.unshift(quoteData);
   cachedQuotations = localQuotes;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, localQuotes);
 
@@ -508,6 +621,7 @@ export async function saveQuotation(quotation) {
       if (db) {
         const { doc, setDoc } = await getFirestoreOps();
         await withTimeout(setDoc(doc(db, 'quotations', id), sanitizeForFirestore(quoteData), { merge: true }), 8000);
+        markAsSynced(id);
       }
     } catch (err) {
       console.warn('Firestore direct save note (cached locally):', err.message);
@@ -518,6 +632,9 @@ export async function saveQuotation(quotation) {
 }
 
 export async function deleteQuotation(id) {
+  if (!id) return true;
+  markAsDeleted(id);
+
   const localQuotes = getLocalQuotations().filter(q => q.id !== id);
   cachedQuotations = localQuotes;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, localQuotes);
@@ -526,8 +643,15 @@ export async function deleteQuotation(id) {
     try {
       const db = await getDbInstance();
       if (db) {
-        const { doc, deleteDoc } = await getFirestoreOps();
-        await withTimeout(deleteDoc(doc(db, 'quotations', id)), 8000);
+        const { doc, deleteDoc, setDoc } = await getFirestoreOps();
+        await withTimeout(Promise.all([
+          deleteDoc(doc(db, 'quotations', id)),
+          setDoc(doc(db, 'deleted_records', id), {
+            id,
+            type: 'quotation',
+            deletedAt: new Date().toISOString()
+          }, { merge: true })
+        ]), 8000);
       }
     } catch (err) {
       console.warn('Firestore direct delete note:', err.message);
@@ -547,16 +671,32 @@ export async function fetchClients() {
       const db = await getDbInstance();
       if (db) {
         const { collection, getDocs, doc, setDoc } = await getFirestoreOps();
+        await syncDeletedRecordsFromCloud(db, getFirestoreOps);
+
         const snap = await withTimeout(getDocs(collection(db, 'clients')), 10000);
         const cloudList = [];
         snap.forEach(d => cloudList.push({ id: d.id, ...d.data() }));
 
+        const deletedIds = getDeletedIds();
+        const activeCloudList = cloudList.filter(c => c && c.id && !deletedIds.has(c.id));
+        markAsSynced(activeCloudList.map(c => c.id));
+        const syncedIds = getSyncedIds();
+        const cloudIds = new Set(activeCloudList.map(c => c.id));
+
+        // Purge items from localList if they were deleted or were previously synced to cloud and are now absent
+        const validLocalList = (localList || []).filter(c => {
+          if (!c || !c.id) return false;
+          if (deletedIds.has(c.id)) return false;
+          if (syncedIds.has(c.id) && !cloudIds.has(c.id)) return false; // Was deleted from cloud!
+          return true;
+        });
+
         const clientMap = new Map();
-        (localList || []).forEach(c => {
+        validLocalList.forEach(c => {
           const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
           if (key) clientMap.set(key, c);
         });
-        cloudList.forEach(c => {
+        activeCloudList.forEach(c => {
           const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
           if (key) {
             const local = clientMap.get(key);
@@ -564,12 +704,12 @@ export async function fetchClients() {
           }
         });
 
-        // AUTO-SYNC: Push any missing local clients to cloud
-        const cloudIds = new Set(cloudList.map(c => c.id));
-        const missingInCloud = (localList || []).filter(c => c && c.id && !cloudIds.has(c.id));
+        // AUTO-SYNC: Push only genuinely new unsynced local clients to cloud
+        const missingInCloud = validLocalList.filter(c => !cloudIds.has(c.id) && !syncedIds.has(c.id));
         if (missingInCloud.length > 0) {
           Promise.all(missingInCloud.map(c => 
             setDoc(doc(db, 'clients', c.id), sanitizeForFirestore(c), { merge: true })
+              .then(() => markAsSynced(c.id))
           )).catch(e => console.warn('Background client auto-upload error:', e));
         }
 
@@ -584,14 +724,15 @@ export async function fetchClients() {
     }
   }
 
-  return localList;
+  const deletedIds = getDeletedIds();
+  return (localList || []).filter(c => c && c.id && !deletedIds.has(c.id));
 }
 
 export async function saveClient(client) {
-  const localList = [...getLocalClients()];
   const cleanName = (client.companyName || '').trim().toLowerCase();
   const cleanGstin = (client.gstin || '').trim().toUpperCase();
 
+  const localList = [...getLocalClients()];
   // Find existing by ID, companyName, or GSTIN
   const idx = localList.findIndex(c => 
     (client.id && c.id === client.id) ||
@@ -600,6 +741,8 @@ export async function saveClient(client) {
   );
 
   const id = idx >= 0 ? localList[idx].id : (client.id || 'client-' + Date.now());
+  unmarkDeleted(id);
+
   const clientData = {
     ...(idx >= 0 ? localList[idx] : {}),
     ...client,
@@ -634,6 +777,7 @@ export async function saveClient(client) {
       if (db) {
         const { doc, setDoc } = await getFirestoreOps();
         await withTimeout(setDoc(doc(db, 'clients', id), sanitizeForFirestore(clientData), { merge: true }), 8000);
+        markAsSynced(id);
       }
     } catch (err) {
       console.warn('Firestore client direct save note (cached locally):', err.message);
@@ -644,6 +788,9 @@ export async function saveClient(client) {
 }
 
 export async function deleteClient(id) {
+  if (!id) return true;
+  markAsDeleted(id);
+
   const localList = getLocalClients().filter(c => c.id !== id);
   cachedClients = localList;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, localList);
@@ -652,8 +799,15 @@ export async function deleteClient(id) {
     try {
       const db = await getDbInstance();
       if (db) {
-        const { doc, deleteDoc } = await getFirestoreOps();
-        await withTimeout(deleteDoc(doc(db, 'clients', id)), 8000);
+        const { doc, deleteDoc, setDoc } = await getFirestoreOps();
+        await withTimeout(Promise.all([
+          deleteDoc(doc(db, 'clients', id)),
+          setDoc(doc(db, 'deleted_records', id), {
+            id,
+            type: 'client',
+            deletedAt: new Date().toISOString()
+          }, { merge: true })
+        ]), 8000);
       }
     } catch (err) {
       console.warn('Firestore client direct delete note:', err.message);
@@ -673,16 +827,32 @@ export async function fetchProducts() {
       const db = await getDbInstance();
       if (db) {
         const { collection, getDocs, doc, setDoc } = await getFirestoreOps();
+        await syncDeletedRecordsFromCloud(db, getFirestoreOps);
+
         const snap = await withTimeout(getDocs(collection(db, 'products')), 10000);
         const cloudList = [];
         snap.forEach(d => cloudList.push({ id: d.id, ...d.data() }));
 
+        const deletedIds = getDeletedIds();
+        const activeCloudList = cloudList.filter(p => p && p.id && !deletedIds.has(p.id));
+        markAsSynced(activeCloudList.map(p => p.id));
+        const syncedIds = getSyncedIds();
+        const cloudIds = new Set(activeCloudList.map(p => p.id));
+
+        // Purge items from localList if they were deleted or were previously synced to cloud and are now absent
+        const validLocalList = (localList || []).filter(p => {
+          if (!p || !p.id) return false;
+          if (deletedIds.has(p.id)) return false;
+          if (syncedIds.has(p.id) && !cloudIds.has(p.id)) return false; // Was deleted from cloud!
+          return true;
+        });
+
         const prodMap = new Map();
-        (localList || []).forEach(p => {
+        validLocalList.forEach(p => {
           const key = (p.id || p.name || '').trim().toLowerCase();
           if (key) prodMap.set(key, p);
         });
-        cloudList.forEach(p => {
+        activeCloudList.forEach(p => {
           const key = (p.id || p.name || '').trim().toLowerCase();
           if (key) {
             const local = prodMap.get(key);
@@ -690,12 +860,12 @@ export async function fetchProducts() {
           }
         });
 
-        // AUTO-SYNC: Push any missing local products to cloud
-        const cloudIds = new Set(cloudList.map(p => p.id));
-        const missingInCloud = (localList || []).filter(p => p && p.id && !cloudIds.has(p.id));
+        // AUTO-SYNC: Push only genuinely new unsynced local products to cloud
+        const missingInCloud = validLocalList.filter(p => !cloudIds.has(p.id) && !syncedIds.has(p.id));
         if (missingInCloud.length > 0) {
           Promise.all(missingInCloud.map(p => 
             setDoc(doc(db, 'products', p.id), sanitizeForFirestore(p), { merge: true })
+              .then(() => markAsSynced(p.id))
           )).catch(e => console.warn('Background product auto-upload error:', e));
         }
 
@@ -710,20 +880,17 @@ export async function fetchProducts() {
     }
   }
 
-  return localList;
+  const deletedIds = getDeletedIds();
+  return (localList || []).filter(p => p && p.id && !deletedIds.has(p.id));
 }
 
 export async function saveProduct(product) {
   const id = product.id || 'prod-' + Date.now();
+  unmarkDeleted(id);
   const prodData = { ...product, id };
 
-  const localList = [...getLocalProducts()];
-  const idx = localList.findIndex(p => p.id === id);
-  if (idx >= 0) {
-    localList[idx] = prodData;
-  } else {
-    localList.push(prodData);
-  }
+  const localList = [...getLocalProducts().filter(p => p.id !== id)];
+  localList.push(prodData);
   cachedProducts = localList;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, localList);
 
@@ -733,6 +900,7 @@ export async function saveProduct(product) {
       if (db) {
         const { doc, setDoc } = await getFirestoreOps();
         await withTimeout(setDoc(doc(db, 'products', id), sanitizeForFirestore(prodData), { merge: true }), 8000);
+        markAsSynced(id);
       }
     } catch (err) {
       console.warn('Firestore product direct save note (cached locally):', err.message);
@@ -743,6 +911,9 @@ export async function saveProduct(product) {
 }
 
 export async function deleteProduct(id) {
+  if (!id) return true;
+  markAsDeleted(id);
+
   const localList = getLocalProducts().filter(p => p.id !== id);
   cachedProducts = localList;
   safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, localList);
@@ -751,8 +922,15 @@ export async function deleteProduct(id) {
     try {
       const db = await getDbInstance();
       if (db) {
-        const { doc, deleteDoc } = await getFirestoreOps();
-        await withTimeout(deleteDoc(doc(db, 'products', id)), 8000);
+        const { doc, deleteDoc, setDoc } = await getFirestoreOps();
+        await withTimeout(Promise.all([
+          deleteDoc(doc(db, 'products', id)),
+          setDoc(doc(db, 'deleted_records', id), {
+            id,
+            type: 'product',
+            deletedAt: new Date().toISOString()
+          }, { merge: true })
+        ]), 8000);
       }
     } catch (err) {
       console.warn('Firestore product direct delete note:', err.message);
@@ -979,22 +1157,33 @@ export function subscribeToQuotations(callback) {
     try {
       const { collection, onSnapshot } = await getFirestoreOps();
       unsubscribe = onSnapshot(collection(db, 'quotations'), (snapshot) => {
+        const deletedIds = getDeletedIds();
         const cloudList = [];
         snapshot.forEach(docSnap => {
-          cloudList.push({ id: docSnap.id, ...docSnap.data() });
+          if (!deletedIds.has(docSnap.id)) {
+            cloudList.push({ id: docSnap.id, ...docSnap.data() });
+          }
         });
 
+        markAsSynced(cloudList.map(c => c.id));
+        const syncedIds = getSyncedIds();
+        const cloudIds = new Set(cloudList.map(c => c.id));
+
         const localList = getLocalQuotations();
+        const validLocal = (localList || []).filter(item => {
+          if (!item || !item.id || deletedIds.has(item.id)) return false;
+          if (syncedIds.has(item.id) && !cloudIds.has(item.id)) return false; // Deleted from cloud!
+          return true;
+        });
+
         const mergedMap = new Map();
-        localList.forEach(item => {
-          if (item && item.id) mergedMap.set(item.id, item);
+        validLocal.forEach(item => {
+          mergedMap.set(item.id, item);
         });
         cloudList.forEach(item => {
-          if (item && item.id) {
-            const local = mergedMap.get(item.id);
-            if (!local || new Date(item.updatedAt || 0) >= new Date(local.updatedAt || 0)) {
-              mergedMap.set(item.id, item);
-            }
+          const local = mergedMap.get(item.id);
+          if (!local || new Date(item.updatedAt || 0) >= new Date(local.updatedAt || 0)) {
+            mergedMap.set(item.id, item);
           }
         });
 
@@ -1030,12 +1219,27 @@ export function subscribeToClients(callback) {
     try {
       const { collection, onSnapshot } = await getFirestoreOps();
       unsubscribe = onSnapshot(collection(db, 'clients'), (snapshot) => {
+        const deletedIds = getDeletedIds();
         const cloudList = [];
-        snapshot.forEach(d => cloudList.push({ id: d.id, ...d.data() }));
+        snapshot.forEach(d => {
+          if (!deletedIds.has(d.id)) {
+            cloudList.push({ id: d.id, ...d.data() });
+          }
+        });
+
+        markAsSynced(cloudList.map(c => c.id));
+        const syncedIds = getSyncedIds();
+        const cloudIds = new Set(cloudList.map(c => c.id));
 
         const localList = getLocalClients();
+        const validLocal = (localList || []).filter(c => {
+          if (!c || !c.id || deletedIds.has(c.id)) return false;
+          if (syncedIds.has(c.id) && !cloudIds.has(c.id)) return false; // Deleted from cloud!
+          return true;
+        });
+
         const clientMap = new Map();
-        localList.forEach(c => {
+        validLocal.forEach(c => {
           const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
           if (key) clientMap.set(key, c);
         });
@@ -1057,6 +1261,70 @@ export function subscribeToClients(callback) {
       });
     } catch (e) {
       console.warn('Failed to attach client sync listener:', e);
+    }
+  }).catch(() => {});
+
+  return () => {
+    active = false;
+    if (typeof unsubscribe === 'function') unsubscribe();
+  };
+}
+
+/**
+ * Attaches real-time Firestore listener for product catalog.
+ */
+export function subscribeToProducts(callback) {
+  if (typeof window === 'undefined') return () => {};
+  let unsubscribe = null;
+  let active = true;
+
+  getDbInstance().then(async (db) => {
+    if (!db || !active) return;
+    try {
+      const { collection, onSnapshot } = await getFirestoreOps();
+      unsubscribe = onSnapshot(collection(db, 'products'), (snapshot) => {
+        const deletedIds = getDeletedIds();
+        const cloudList = [];
+        snapshot.forEach(d => {
+          if (!deletedIds.has(d.id)) {
+            cloudList.push({ id: d.id, ...d.data() });
+          }
+        });
+
+        markAsSynced(cloudList.map(p => p.id));
+        const syncedIds = getSyncedIds();
+        const cloudIds = new Set(cloudList.map(p => p.id));
+
+        const localList = getLocalProducts();
+        const validLocal = (localList || []).filter(p => {
+          if (!p || !p.id || deletedIds.has(p.id)) return false;
+          if (syncedIds.has(p.id) && !cloudIds.has(p.id)) return false; // Deleted from cloud!
+          return true;
+        });
+
+        const prodMap = new Map();
+        validLocal.forEach(p => {
+          const key = (p.id || p.name || '').trim().toLowerCase();
+          if (key) prodMap.set(key, p);
+        });
+        cloudList.forEach(p => {
+          const key = (p.id || p.name || '').trim().toLowerCase();
+          if (key) {
+            const local = prodMap.get(key);
+            prodMap.set(key, { ...(local || {}), ...p });
+          }
+        });
+
+        const merged = Array.from(prodMap.values());
+        merged.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        cachedProducts = merged;
+        safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, merged);
+        callback(merged);
+      }, (err) => {
+        console.warn('Real-time product sync listener note:', err.message);
+      });
+    } catch (e) {
+      console.warn('Failed to attach product sync listener:', e);
     }
   }).catch(() => {});
 
