@@ -481,12 +481,9 @@ export function generateNextProformaNumber(existingDocs = [], linkedQuote = null
   return `PI-${nextSeq}`;
 }
 
-// Sequential Final Tax Invoice Number Generator starting strictly from 1 (e.g. KITS/INV/026/11/001)
+// Sequential Final Tax Invoice Number Generator starting strictly from 001 (e.g. KITS/INV/001, KITS/INV/002)
 export function generateNextTaxInvoiceNumber(existingDocs = [], prefix = 'KITS/INV') {
-  const d = new Date();
-  const currentYear = d.getFullYear().toString().slice(-2);
-  const currentMonth = (d.getMonth() + 1).toString().padStart(2, '0');
-  const basePrefix = `${prefix}/0${currentYear}/${currentMonth}/`;
+  const basePrefix = `${prefix}/`;
 
   let maxSeq = 0;
   const list = Array.isArray(existingDocs) ? existingDocs : [];
@@ -499,6 +496,14 @@ export function generateNextTaxInvoiceNumber(existingDocs = [], prefix = 'KITS/I
         const num = parseInt(numStr.slice(basePrefix.length).trim(), 10);
         if (!isNaN(num) && num > maxSeq) {
           maxSeq = num;
+        }
+      } else if (numStr.includes('INV/')) {
+        const match = numStr.match(/INV\/(?:0\d{2}\/\d{2}\/)?(\d+)/i) || numStr.match(/INV\/.*?(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxSeq) {
+            maxSeq = num;
+          }
         }
       } else if (INV_PREFIX_REGEX.test(numStr)) {
         const num = parseInt(numStr.replace(INV_PREFIX_REGEX, ''), 10);
