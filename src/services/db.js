@@ -418,6 +418,15 @@ export function generateNextTaxInvoiceNumber(existingDocs = [], prefix = 'KITS/I
   return `${basePrefix}${nextSeq}`;
 }
 
+// Helper to sanitize payload for Firestore (strips undefined fields which cause Firestore errors)
+function sanitizeForFirestore(data) {
+  try {
+    return JSON.parse(JSON.stringify(data));
+  } catch {
+    return data;
+  }
+}
+
 // ==================== QUOTATIONS ====================
 
 export async function fetchQuotations() {
@@ -487,7 +496,7 @@ export async function saveQuotation(quotation) {
   getDbInstance().then(async (db) => {
     if (db) {
       const { doc, setDoc } = await getFirestoreOps();
-      withTimeout(setDoc(doc(db, 'quotations', id), quoteData, { merge: true }), 3000)
+      withTimeout(setDoc(doc(db, 'quotations', id), sanitizeForFirestore(quoteData), { merge: true }), 4000)
         .catch(err => console.warn('Background Firestore save skipped:', err.message));
     }
   }).catch(() => {});
@@ -597,7 +606,7 @@ export async function saveClient(client) {
   getDbInstance().then(async (db) => {
     if (db) {
       const { doc, setDoc } = await getFirestoreOps();
-      withTimeout(setDoc(doc(db, 'clients', id), clientData, { merge: true }), 3000)
+      withTimeout(setDoc(doc(db, 'clients', id), sanitizeForFirestore(clientData), { merge: true }), 4000)
         .catch(err => console.warn('Background Firestore client save skipped:', err.message));
     }
   }).catch(() => {});
@@ -680,7 +689,7 @@ export async function saveProduct(product) {
   getDbInstance().then(async (db) => {
     if (db) {
       const { doc, setDoc } = await getFirestoreOps();
-      withTimeout(setDoc(doc(db, 'products', id), prodData, { merge: true }), 3000)
+      withTimeout(setDoc(doc(db, 'products', id), sanitizeForFirestore(prodData), { merge: true }), 4000)
         .catch(err => console.warn('Background Firestore product save skipped:', err.message));
     }
   }).catch(() => {});
@@ -738,7 +747,7 @@ export async function saveCompanySettings(settings) {
   getDbInstance().then(async (db) => {
     if (db) {
       const { doc, setDoc } = await getFirestoreOps();
-      withTimeout(setDoc(doc(db, 'settings', 'company'), settings, { merge: true }), 3000)
+      withTimeout(setDoc(doc(db, 'settings', 'company'), sanitizeForFirestore(settings), { merge: true }), 4000)
         .catch(err => console.warn('Background Firestore settings save skipped:', err.message));
     }
   }).catch(() => {});
@@ -860,24 +869,24 @@ export async function syncAllToFirebase() {
   const batch = writeBatch(db);
 
   if (settings && settings.name) {
-    batch.set(doc(db, 'settings', 'company'), settings, { merge: true });
+    batch.set(doc(db, 'settings', 'company'), sanitizeForFirestore(settings), { merge: true });
   }
 
   clients.forEach(client => {
     if (client.id) {
-      batch.set(doc(db, 'clients', client.id), client, { merge: true });
+      batch.set(doc(db, 'clients', client.id), sanitizeForFirestore(client), { merge: true });
     }
   });
 
   products.forEach(product => {
     if (product.id) {
-      batch.set(doc(db, 'products', product.id), product, { merge: true });
+      batch.set(doc(db, 'products', product.id), sanitizeForFirestore(product), { merge: true });
     }
   });
 
   quotes.forEach(quote => {
     if (quote.id) {
-      batch.set(doc(db, 'quotations', quote.id), quote, { merge: true });
+      batch.set(doc(db, 'quotations', quote.id), sanitizeForFirestore(quote), { merge: true });
     }
   });
 
