@@ -26,6 +26,7 @@ import {
   COMMON_HSN_CODES 
 } from '../utils/gstHelper';
 import TaxInvoiceEditor from './TaxInvoiceEditor';
+import DocumentConvertMenu from './DocumentConvertMenu';
 
 function buildFormDataFromQuote(quote, proformaInvoices) {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -44,15 +45,15 @@ function buildFormDataFromQuote(quote, proformaInvoices) {
       category: detectedCategory,
       invoiceNo: initialNo,
       linkedQuotationId: quote.id || '',
-      linkedQuotationNumber: quote.quotationNumber || '',
+      linkedQuotationNumber: quote.quotationNumber || quote.challanNo || '',
       date: todayStr,
       validityDays: quote.validityDays || 30,
       customerPoNo: quote.customerPoNo || '',
       customerPoDate: quote.customerPoDate || '',
-      customerId: quote.clientId || '',
-      customerName: quote.clientName || '',
-      billingAddress: quote.billingAddress || '',
-      customerGstin: quote.clientGstin || '',
+      customerId: quote.clientId || quote.customerId || '',
+      customerName: quote.clientName || quote.customerName || quote.consigneeName || '',
+      billingAddress: quote.billingAddress || quote.consigneeAddress || '',
+      customerGstin: quote.clientGstin || quote.customerGstin || quote.consigneeGstin || '',
       clientState: inferredState || '',
       placeOfSupply: quote.placeOfSupply || '',
       shipToSameAsBillTo: quote.shipToSameAsBillTo !== undefined ? quote.shipToSameAsBillTo : true,
@@ -128,7 +129,8 @@ function ProformaManager({
   onViewQuotation,
   onShareQuotation,
   onDeleteQuotation,
-  onNavigateTab
+  onNavigateTab,
+  onConvertDocument
 }) {
   const [viewMode, setViewMode] = useState(() => {
     if (defaultFilter === 'tax' && initialQuotation) return 'tax-invoice';
@@ -1657,16 +1659,19 @@ function ProformaManager({
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Convert to Final Tax Invoice (if Proforma) */}
-                          {!isTaxDoc && (
-                            <button
-                              onClick={() => handleConvertToTaxInvoice(inv)}
-                              className="p-1 sm:p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                              title="Generate Final Invoice for Dispatch"
-                            >
-                              <Receipt className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          {/* Generate Further Document (Tax Invoice, Delivery Challan, Demo Challan, Proforma) */}
+                          <DocumentConvertMenu
+                            document={inv}
+                            onConvert={(doc, targetType) => {
+                              if (onConvertDocument) {
+                                onConvertDocument(doc, targetType);
+                              } else if (targetType === 'tax-invoice') {
+                                handleConvertToTaxInvoice(doc);
+                              }
+                            }}
+                            variant="icon"
+                            align="right"
+                          />
 
                           {/* Share */}
                           <button

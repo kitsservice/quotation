@@ -561,28 +561,32 @@ export default function App() {
     setProformaSourceQuote(quote);
     setProformaInitialMode('create');
     setActiveTab('proforma');
-    showToast(`Quotation ${quote.quotationNumber} linked to Proforma Invoice.`);
+    const docId = quote?.quotationNumber || quote?.challanNo || quote?.invoiceNo || 'Document';
+    showToast(`Document ${docId} linked to Proforma Invoice.`);
   }, [showToast]);
 
   const handleConvertToTaxInvoice = useCallback((quote) => {
     setProformaSourceQuote(quote);
     setInvoicesInitialMode('create');
     setActiveTab('invoices');
-    showToast(`Quotation ${quote.quotationNumber} linked to Final Tax Invoice.`);
+    const docId = quote?.quotationNumber || quote?.challanNo || quote?.invoiceNo || 'Document';
+    showToast(`Document ${docId} linked to Final Tax Invoice.`);
   }, [showToast]);
 
   const handleConvertToChallan = useCallback((quote) => {
     setChallanSourceDoc(quote);
     setChallanInitialMode('create');
     setActiveTab('challans');
-    showToast(`Quotation ${quote.quotationNumber} linked to Delivery Challan.`);
+    const docId = quote?.challanNo || quote?.quotationNumber || quote?.invoiceNo || 'Document';
+    showToast(`Document ${docId} linked to Delivery Challan.`);
   }, [showToast]);
 
   const handleConvertToDemoChallan = useCallback((quote) => {
     setDemoChallanSourceDoc(quote);
     setDemoChallanInitialMode('create');
     setActiveTab('demo-challans');
-    showToast(`Quotation ${quote.quotationNumber} linked to Demo Delivery Challan.`);
+    const docId = quote?.challanNo || quote?.quotationNumber || quote?.invoiceNo || 'Document';
+    showToast(`Document ${docId} linked to Demo Delivery Challan.`);
   }, [showToast]);
 
   const handleConvertDocument = useCallback((doc, targetType) => {
@@ -970,19 +974,20 @@ export default function App() {
                   onShareQuotation={(q) => setShareQuotation(q)}
                   onDeleteQuotation={(id) => handleDeleteQuotation(id, true)}
                   onNavigateTab={(tab) => setActiveTab(tab)}
+                  onConvertDocument={handleConvertDocument}
                 />
               )}
 
               {/* SCREEN 4B: INVOICES (Cards of the Invoices) */}
               {activeTab === 'invoices' && (
                 <ProformaManager
-                  key={`invoices-view-${invoicesInitialMode}`}
-                  initialMode={invoicesInitialMode}
+                  key={proformaSourceQuote?.id ? `ti-source-${proformaSourceQuote.id}` : `invoices-view-${invoicesInitialMode}`}
+                  initialMode={proformaSourceQuote ? 'create' : invoicesInitialMode}
                   defaultFilter="tax"
                   clients={clients}
                   quotations={quotations}
                   companySettings={companySettings}
-                  initialQuotation={null}
+                  initialQuotation={proformaSourceQuote}
                   onClearInitialQuotation={() => {
                     setProformaSourceQuote(null);
                     setInvoicesInitialMode('cards');
@@ -998,6 +1003,7 @@ export default function App() {
                   onShareQuotation={(q) => setShareQuotation(q)}
                   onDeleteQuotation={(id) => handleDeleteQuotation(id, true)}
                   onNavigateTab={(tab) => setActiveTab(tab)}
+                  onConvertDocument={handleConvertDocument}
                 />
               )}
 
@@ -1021,6 +1027,7 @@ export default function App() {
                   }}
                   onNavigateTab={(tab) => setActiveTab(tab)}
                   onViewQuotation={handleViewQuotation}
+                  onConvertDocument={handleConvertDocument}
                 />
               )}
 
@@ -1045,6 +1052,7 @@ export default function App() {
                   }}
                   onNavigateTab={(tab) => setActiveTab(tab)}
                   onViewQuotation={handleViewQuotation}
+                  onConvertDocument={handleConvertDocument}
                 />
               )}
 

@@ -22,6 +22,7 @@ import { numberToIndianWords } from '../utils/numberToWords';
 import { generateNextDeliveryChallanNumber, generateNextDemoChallanNumber } from '../services/db';
 import { exportToPdf, printDocument } from '../services/pdfGenerator';
 import { KitsDocumentHeader, KitsDocumentFooter } from './KitsHeaderFooter';
+import DocumentConvertMenu from './DocumentConvertMenu';
 
 const REMOVAL_PURPOSES = [
   'Installation & Commissioning at Site',
@@ -74,9 +75,9 @@ function createDefaultFormData(quotations, isDemo = false, sourceDoc = null) {
         }
       ];
 
-  const docNumber = sourceDoc?.quotationNumber || sourceDoc?.invoiceNo || '';
+  const docNumber = sourceDoc?.challanNo || sourceDoc?.quotationNumber || sourceDoc?.invoiceNo || '';
   const docType = sourceDoc 
-    ? (sourceDoc.documentType || (sourceDoc.isTaxInvoice ? 'Tax Invoice' : sourceDoc.isProforma ? 'Proforma Invoice' : 'Quotation'))
+    ? (sourceDoc.documentType || (sourceDoc.isDeliveryChallan ? 'Delivery Challan' : sourceDoc.isTaxInvoice ? 'Tax Invoice' : sourceDoc.isProforma ? 'Proforma Invoice' : 'Quotation'))
     : '';
 
   return {
@@ -92,14 +93,14 @@ function createDefaultFormData(quotations, isDemo = false, sourceDoc = null) {
     linkedDocNumber: docNumber,
     customerPoNo: sourceDoc?.customerPoNo || '',
     customerPoDate: sourceDoc?.customerPoDate || '',
-    clientId: sourceDoc?.clientId || '',
-    clientName: sourceDoc?.clientName || sourceDoc?.customerName || '',
-    billingAddress: sourceDoc?.billingAddress || sourceDoc?.address || '',
-    clientGstin: sourceDoc?.clientGstin || sourceDoc?.gstin || '',
+    clientId: sourceDoc?.clientId || sourceDoc?.customerId || '',
+    clientName: sourceDoc?.clientName || sourceDoc?.customerName || sourceDoc?.consigneeName || '',
+    billingAddress: sourceDoc?.billingAddress || sourceDoc?.consigneeAddress || sourceDoc?.address || '',
+    clientGstin: sourceDoc?.clientGstin || sourceDoc?.consigneeGstin || sourceDoc?.gstin || '',
     clientState: sourceDoc?.clientState || 'Maharashtra',
     placeOfSupply: sourceDoc?.placeOfSupply || 'Akola Maharashtra',
     shipToSameAsBillTo: sourceDoc?.shipToSameAsBillTo !== undefined ? sourceDoc.shipToSameAsBillTo : true,
-    shippingAddress: sourceDoc?.shippingAddress || sourceDoc?.billingAddress || '',
+    shippingAddress: sourceDoc?.shippingAddress || sourceDoc?.consigneeAddress || sourceDoc?.billingAddress || '',
     contactPerson: sourceDoc?.contactPerson || '',
     contactPhone: sourceDoc?.contactPhone || '',
     transportMode: sourceDoc?.modeOfTransport?.includes('Courier') ? 'Courier' : 'Road',
@@ -163,7 +164,8 @@ function DeliveryChallanManager({
   onSaveChallan,
   onDeleteChallan,
   onNavigateTab,
-  onViewQuotation
+  onViewQuotation,
+  onConvertDocument
 }) {
   const [viewMode, setViewMode] = useState(() => initialSourceDoc ? 'create' : (initialMode || 'list')); // 'list' | 'create' | 'preview'
   const [selectedChallan, setSelectedChallan] = useState(null);
@@ -815,6 +817,17 @@ function DeliveryChallanManager({
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
+
+                          {/* Generate Further Document (Tax Invoice, Proforma, Demo Challan, Delivery Challan) */}
+                          {onConvertDocument && (
+                            <DocumentConvertMenu
+                              document={ch}
+                              onConvert={onConvertDocument}
+                              variant="icon"
+                              align="right"
+                            />
+                          )}
+
                           <button
                             onClick={() => handleDuplicate(ch)}
                             title="Duplicate Challan"
@@ -1571,28 +1584,42 @@ function DeliveryChallanManager({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center flex-wrap gap-2">
               <button
-                onClick={() => handleStartEdit(selectedChallan)}
-                className="px-3.5 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit</span>
-              </button>
-              <button
+                type="button"
                 onClick={() => printDocument()}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer"
+                className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+                title="Print Delivery Challan"
               >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print Document</span>
+                <Printer className="w-3.5 h-3.5 text-slate-600" />
+                <span>Print</span>
               </button>
               <button
+                type="button"
                 onClick={handleDownloadPdf}
                 disabled={isExporting}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 flex items-center space-x-1.5 cursor-pointer"
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
+                title="Download PDF"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>{isExporting ? 'Generating PDF...' : 'Download PDF'}</span>
+              </button>
+              {onConvertDocument && (
+                <DocumentConvertMenu
+                  document={selectedChallan}
+                  onConvert={onConvertDocument}
+                  variant="button"
+                  buttonClassName="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shadow-xs active:scale-95 shrink-0 whitespace-nowrap"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => handleStartEdit(selectedChallan)}
+                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+                title="Edit Delivery Challan"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit</span>
               </button>
             </div>
           </div>

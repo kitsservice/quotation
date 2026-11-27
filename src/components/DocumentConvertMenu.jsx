@@ -41,6 +41,14 @@ function DocumentConvertMenu({
   const isTaxDoc = Boolean(doc.isTaxInvoice || doc.documentType === 'Tax Invoice');
   const isProformaDoc = Boolean(doc.isProforma || doc.documentType === 'Proforma Invoice');
   const isChallanDoc = Boolean(doc.isDeliveryChallan || doc.documentType === 'Delivery Challan');
+  const isDemoChallanDoc = Boolean(
+    isChallanDoc && (
+      doc.isDemoChallan || 
+      doc.purpose === 'Demonstration / Exhibition' || 
+      (doc.challanNo && (doc.challanNo.includes('DEMO') || doc.challanNo.includes('DCD')))
+    )
+  );
+  const isStandardChallanDoc = isChallanDoc && !isDemoChallanDoc;
 
   const handleSelect = (targetType) => {
     setIsOpen(false);
@@ -53,8 +61,8 @@ function DocumentConvertMenu({
         <button
           type="button"
           onClick={() => setIsOpen(prev => !prev)}
-          className={buttonClassName || "flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"}
-          title="Create further documents (Proforma, Tax Invoice, Delivery Challan)"
+          className={buttonClassName || "flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"}
+          title="Create further documents (Proforma, Tax Invoice, Delivery Challan, Demo Challan)"
         >
           <FileCheck2 className="w-3.5 h-3.5" />
           <span>Generate Document</span>
@@ -64,10 +72,10 @@ function DocumentConvertMenu({
         <button
           type="button"
           onClick={() => setIsOpen(prev => !prev)}
-          className={buttonClassName || "p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer flex items-center space-x-0.5"}
-          title="Generate further document (Proforma, Tax Invoice, Delivery Challan)"
+          className={buttonClassName || "p-1 sm:p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer flex items-center space-x-0.5"}
+          title="Generate further document (Proforma, Tax Invoice, Delivery Challan, Demo Challan)"
         >
-          <FileCheck2 className="w-4 h-4" />
+          <FileCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       )}
@@ -80,8 +88,8 @@ function DocumentConvertMenu({
             Create Further Document
           </div>
 
-          {/* 1. Proforma Invoice (if not already Proforma, Tax Invoice, or Challan) */}
-          {!isProformaDoc && !isTaxDoc && !isChallanDoc && (
+          {/* 1. Proforma Invoice (if not already Proforma) */}
+          {!isProformaDoc && (
             <button
               type="button"
               onClick={() => handleSelect('proforma')}
@@ -100,8 +108,8 @@ function DocumentConvertMenu({
             </button>
           )}
 
-          {/* 2. Final Tax Invoice (if not already Tax Invoice or Challan) */}
-          {!isTaxDoc && !isChallanDoc && (
+          {/* 2. Final Tax Invoice (if not already Tax Invoice) */}
+          {!isTaxDoc && (
             <button
               type="button"
               onClick={() => handleSelect('tax-invoice')}
@@ -120,41 +128,45 @@ function DocumentConvertMenu({
             </button>
           )}
 
-          {/* 3. Delivery Challan (Rule 55) */}
-          <button
-            type="button"
-            onClick={() => handleSelect('challan')}
-            className="w-full flex items-start space-x-2.5 px-3 py-2 rounded-xl text-left hover:bg-blue-50 transition-colors group cursor-pointer"
-          >
-            <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <Truck className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold text-slate-800 group-hover:text-blue-700 flex items-center justify-between">
-                <span>Delivery Challan</span>
-                <span className="text-[9px] font-mono text-blue-600 bg-blue-50 px-1 rounded border border-blue-200">Rule 55</span>
+          {/* 3. Delivery Challan (Rule 55 - if not already standard Delivery Challan) */}
+          {!isStandardChallanDoc && (
+            <button
+              type="button"
+              onClick={() => handleSelect('challan')}
+              className="w-full flex items-start space-x-2.5 px-3 py-2 rounded-xl text-left hover:bg-blue-50 transition-colors group cursor-pointer"
+            >
+              <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Truck className="w-4 h-4" />
               </div>
-              <div className="text-[10px] text-slate-500 leading-tight">Goods dispatch for site installation</div>
-            </div>
-          </button>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-bold text-slate-800 group-hover:text-blue-700 flex items-center justify-between">
+                  <span>Delivery Challan</span>
+                  <span className="text-[9px] font-mono text-blue-600 bg-blue-50 px-1 rounded border border-blue-200">Rule 55</span>
+                </div>
+                <div className="text-[10px] text-slate-500 leading-tight">Goods dispatch for site installation</div>
+              </div>
+            </button>
+          )}
 
-          {/* 4. Demo Delivery Challan */}
-          <button
-            type="button"
-            onClick={() => handleSelect('demo-challan')}
-            className="w-full flex items-start space-x-2.5 px-3 py-2 rounded-xl text-left hover:bg-amber-50 transition-colors group cursor-pointer"
-          >
-            <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <PackageCheck className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold text-slate-800 group-hover:text-amber-700 flex items-center justify-between">
-                <span>Demo Delivery Challan</span>
-                <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 rounded border border-amber-200">Trial</span>
+          {/* 4. Demo Delivery Challan (if not already Demo Delivery Challan) */}
+          {!isDemoChallanDoc && (
+            <button
+              type="button"
+              onClick={() => handleSelect('demo-challan')}
+              className="w-full flex items-start space-x-2.5 px-3 py-2 rounded-xl text-left hover:bg-amber-50 transition-colors group cursor-pointer"
+            >
+              <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <PackageCheck className="w-4 h-4" />
               </div>
-              <div className="text-[10px] text-slate-500 leading-tight">7-Day trial / demo without rates & tax</div>
-            </div>
-          </button>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-bold text-slate-800 group-hover:text-amber-700 flex items-center justify-between">
+                  <span>Demo Delivery Challan</span>
+                  <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 rounded border border-amber-200">Trial</span>
+                </div>
+                <div className="text-[10px] text-slate-500 leading-tight">7-Day trial / demo without rates & tax</div>
+              </div>
+            </button>
+          )}
         </div>
       )}
     </div>
