@@ -47,6 +47,11 @@ function getFormattedTime() {
   return `${hours}:${minutes} ${ampm}`;
 }
 
+export const DEFAULT_DEMO_TERMS = `1. The above-mentioned materials are supplied solely for a 7-day demonstration/trial of the IOT PID Based Temperature Monitoring system.
+2. The demonstration is provided Free of Cost (₹0/-).
+3. All materials listed above remain the property of KITS Robotics and Automation Pvt. Ltd. and are to be returned in good working condition upon completion of the demonstration period.
+4. The receiving party shall take reasonable care of the equipment during the demonstration period.`;
+
 function createDefaultFormData(quotations, isDemo = false) {
   const todayStr = new Date().toISOString().split('T')[0];
   const prefix = isDemo ? 'KITS/DCD' : 'KITS/DC';
@@ -84,7 +89,7 @@ function createDefaultFormData(quotations, isDemo = false) {
     ewayBillNo: '',
     status: isDemo ? 'Demo Dispatched' : 'Dispatched',
     remarks: isDemo
-      ? '1. Goods dispatched strictly for Demonstration / Exhibition / Testing trial under Rule 55 of CGST Rules, 2017.\n2. NOT FOR SALE. No commercial sale or consideration is involved.\n3. Goods to be returned in good working condition after completion of demonstration.'
+      ? DEFAULT_DEMO_TERMS
       : '1. Goods dispatched strictly for the purpose mentioned above under Rule 55 of CGST Rules, 2017.\n2. This is NOT A SALE INVOICE. No financial sale is affected through this delivery challan.\n3. Consignment to be verified and acknowledged by the receiver upon delivery.',
     items: [
       {
@@ -280,7 +285,7 @@ function DeliveryChallanManager({
       lrDate: ch.lrDate || '',
       ewayBillNo: ch.ewayBillNo || '',
       status: ch.status || 'Dispatched',
-      remarks: ch.remarks || '',
+      remarks: ch.remarks || ((isDemoModule || ch.isDemoChallan || (ch.challanNo && (ch.challanNo.includes('DEMO') || ch.challanNo.includes('DCD')))) ? DEFAULT_DEMO_TERMS : ''),
       items: Array.isArray(ch.items) && ch.items.length > 0 
         ? ch.items.map(it => ({
             id: it.id || 'it-' + Math.random(),
@@ -1426,19 +1431,32 @@ function DeliveryChallanManager({
             )}
           </div>
 
-          {/* SECTION 5: Remarks & Statutory Declaration */}
+          {/* SECTION 5: Remarks & Terms */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
-            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wide">
-              Statutory Notes, Purpose Details &amp; Special Instructions
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wide">
+                {isCurrentDemo ? 'Terms & Conditions (Demonstration & Trial)' : 'Statutory Notes, Purpose Details & Special Instructions'}
+              </label>
+              {isCurrentDemo && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, remarks: DEFAULT_DEMO_TERMS })}
+                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                >
+                  ↺ Reset to Default Terms
+                </button>
+              )}
+            </div>
             <textarea
-              rows={3}
+              rows={4}
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 leading-relaxed focus:bg-white focus:outline-hidden focus:border-blue-500"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 leading-relaxed focus:bg-white focus:outline-hidden focus:border-blue-500 font-sans"
             />
             <div className="text-[11px] text-slate-500 italic">
-              Note: Under Rule 55 of CGST Rules, this document serves strictly as proof of transportation without financial sale.
+              {isCurrentDemo
+                ? 'These statutory terms will be printed directly on the Demo Delivery Challan document.'
+                : 'Note: Under Rule 55 of CGST Rules, this document serves strictly as proof of transportation without financial sale.'}
             </div>
           </div>
 
@@ -1808,12 +1826,14 @@ function DeliveryChallanManager({
                   </div>
                 )}
 
-                {/* Remarks & Notes */}
-                {selectedChallan.remarks && (
+                {/* Remarks & Terms */}
+                {(selectedChallan.remarks || isSelectedDemo) && (
                   <div className="border border-slate-300 rounded p-2.5 text-[10.5px] space-y-1">
-                    <div className="font-bold text-slate-900 uppercase text-[9.5px]">Terms &amp; Purpose Notes:</div>
+                    <div className="font-bold text-slate-900 uppercase text-[9.5px]">
+                      {isSelectedDemo ? 'Terms & Conditions:' : 'Terms & Purpose Notes:'}
+                    </div>
                     <div className="text-slate-700 whitespace-pre-line leading-relaxed">
-                      {selectedChallan.remarks}
+                      {selectedChallan.remarks || (isSelectedDemo ? DEFAULT_DEMO_TERMS : '')}
                     </div>
                   </div>
                 )}
