@@ -471,9 +471,15 @@ function DeliveryChallanManager({
       challanDoc.lrNumber = '';
       challanDoc.lrDate = '';
       challanDoc.ewayBillNo = '';
+      challanDoc.totalAssessableValue = 0;
+      challanDoc.total = 0;
+      challanDoc.subtotal = 0;
       challanDoc.items = (formData.items || []).map(it => ({
         ...it,
-        hsn: ''
+        hsn: '',
+        hsnCode: '',
+        rate: 0,
+        amount: 0
       }));
     }
 
@@ -594,8 +600,12 @@ function DeliveryChallanManager({
             </div>
 
             <div className="bg-white px-3.5 py-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assessable Cargo Value</span>
-              <span className="text-lg font-black text-blue-700 font-mono mt-0.5 block">{formatCurrency(stats.totalValue, false)}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                {isDemoModule ? 'Total Demo Challans' : 'Assessable Cargo Value'}
+              </span>
+              <span className="text-lg font-black text-blue-700 font-mono mt-0.5 block">
+                {isDemoModule ? `${stats.total} Records` : formatCurrency(stats.totalValue, false)}
+              </span>
             </div>
           </div>
 
@@ -754,12 +764,16 @@ function DeliveryChallanManager({
                         ) : null}
                       </div>
 
-                      {/* Far Right Column (20%): Assessable Value & Action Buttons */}
+                      {/* Far Right Column (20%): Assessable Value / Qty & Action Buttons */}
                       <div className="flex items-center justify-between lg:flex-col lg:items-end lg:justify-center gap-1.5 border-t lg:border-t-0 border-slate-100 pt-2.5 lg:pt-0 lg:w-[20%] shrink-0">
                         <div className="lg:text-right">
-                          <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">Assessable Cargo Value</span>
+                          <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">
+                            {(isDemoModule || ch.isDemoChallan || (ch.challanNo && (ch.challanNo.includes('DEMO') || ch.challanNo.includes('DCD')))) ? 'Consignment Qty' : 'Assessable Cargo Value'}
+                          </span>
                           <span className="font-extrabold text-xs sm:text-sm font-mono text-blue-700">
-                            {formatCurrency(assessableVal)}
+                            {(isDemoModule || ch.isDemoChallan || (ch.challanNo && (ch.challanNo.includes('DEMO') || ch.challanNo.includes('DCD'))))
+                              ? `${ch.totalQuantity || (Array.isArray(ch.items) ? ch.items.reduce((s, i) => s + (Number(i.qty) || 0), 0) : 0)} Units`
+                              : formatCurrency(assessableVal)}
                           </span>
                         </div>
 
@@ -1275,7 +1289,7 @@ function DeliveryChallanManager({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm">
                 <Package className="w-4 h-4 text-blue-600" />
-                <span>Description of Consigned Goods &amp; Assessable Value</span>
+                <span>{isCurrentDemo ? 'Description of Consigned Demo Goods' : 'Description of Consigned Goods & Assessable Value'}</span>
               </div>
 
               <button
@@ -1298,8 +1312,8 @@ function DeliveryChallanManager({
                     {!isCurrentDemo && <th className="py-2.5 px-3 w-28">HSN / SAC</th>}
                     <th className="py-2.5 px-3 w-20 text-center">Qty</th>
                     <th className="py-2.5 px-3 w-24">Unit</th>
-                    <th className="py-2.5 px-3 w-32 text-right">Unit Rate (₹)</th>
-                    <th className="py-2.5 px-3 w-36 text-right">Assessable Val (₹)</th>
+                    {!isCurrentDemo && <th className="py-2.5 px-3 w-32 text-right">Unit Rate (₹)</th>}
+                    {!isCurrentDemo && <th className="py-2.5 px-3 w-36 text-right">Assessable Val (₹)</th>}
                     <th className="py-2.5 px-2 w-10 text-center"></th>
                   </tr>
                 </thead>
@@ -1354,17 +1368,21 @@ function DeliveryChallanManager({
                           ))}
                         </select>
                       </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <input
-                          type="number"
-                          value={item.rate}
-                          onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
-                          className="w-full px-2 py-1.5 text-right font-mono bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
-                        {formatCurrency(item.amount)}
-                      </td>
+                      {!isCurrentDemo && (
+                        <td className="py-2.5 px-3 text-right">
+                          <input
+                            type="number"
+                            value={item.rate}
+                            onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
+                            className="w-full px-2 py-1.5 text-right font-mono bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
+                          />
+                        </td>
+                      )}
+                      {!isCurrentDemo && (
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                          {formatCurrency(item.amount)}
+                        </td>
+                      )}
                       <td className="py-2.5 px-2 text-center">
                         <button
                           type="button"
@@ -1380,25 +1398,32 @@ function DeliveryChallanManager({
                 </tbody>
                 <tfoot className="bg-slate-50 font-bold border-t border-slate-200 text-slate-900">
                   <tr>
-                    <td colSpan={3} className="py-2.5 px-3 text-right">Total Consignment:</td>
-                    <td className="py-2.5 px-3 text-center text-blue-700">{calculatedTotalQuantity} Units</td>
-                    <td colSpan={2} className="py-2.5 px-3 text-right">Total Assessable Value:</td>
-                    <td className="py-2.5 px-3 text-right font-mono font-extrabold text-blue-700">
-                      {formatCurrency(calculatedAssessableValue)}
-                    </td>
+                    <td colSpan={2} className="py-2.5 px-3 text-right">Total Consignment:</td>
+                    <td className="py-2.5 px-3 text-center text-blue-700">{calculatedTotalQuantity}</td>
+                    <td className="py-2.5 px-3 text-slate-600 font-normal">Units</td>
+                    {!isCurrentDemo && (
+                      <>
+                        <td className="py-2.5 px-3 text-right">Total Assessable Value:</td>
+                        <td className="py-2.5 px-3 text-right font-mono font-extrabold text-blue-700">
+                          {formatCurrency(calculatedAssessableValue)}
+                        </td>
+                      </>
+                    )}
                     <td></td>
                   </tr>
                 </tfoot>
               </table>
             </div>
 
-            {/* Assessable Value in Indian Words */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs flex items-center space-x-2">
-              <span className="font-bold text-slate-700 shrink-0">Amount in Words:</span>
-              <span className="text-slate-800 font-serif italic font-medium">
-                {numberToIndianWords(calculatedAssessableValue)}
-              </span>
-            </div>
+            {/* Assessable Value in Indian Words (Strictly hidden for Demo Delivery Challan) */}
+            {!isCurrentDemo && (
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs flex items-center space-x-2">
+                <span className="font-bold text-slate-700 shrink-0">Amount in Words:</span>
+                <span className="text-slate-800 font-serif italic font-medium">
+                  {numberToIndianWords(calculatedAssessableValue)}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* SECTION 5: Remarks & Statutory Declaration */}
@@ -1547,7 +1572,7 @@ function DeliveryChallanManager({
                   </div>
 
                   <h2 className="text-xl font-black tracking-wider text-slate-950 uppercase font-serif">
-                    {isDemoModule || selectedChallan?.isDemoChallan ? 'DEMO DELIVERY CHALLAN' : 'DELIVERY CHALLAN'}
+                    {isSelectedDemo ? 'DEMO DELIVERY CHALLAN' : 'DELIVERY CHALLAN'}
                   </h2>
                   <div className="text-[9.5px] font-bold text-slate-700 tracking-wide mt-0.5 uppercase">
                     {isDemoModule || selectedChallan?.isDemoChallan
@@ -1703,8 +1728,12 @@ function DeliveryChallanManager({
                         )}
                         <th className="py-2 px-2 border-r border-slate-800 w-16 text-center">Quantity</th>
                         <th className="py-2 px-2 border-r border-slate-800 w-16 text-center">Unit</th>
-                        <th className="py-2 px-3 border-r border-slate-800 w-24 text-right">Rate (₹)</th>
-                        <th className="py-2 px-3 w-28 text-right">Assessable Val (₹)</th>
+                        {!isSelectedDemo && (
+                          <th className="py-2 px-3 border-r border-slate-800 w-24 text-right">Rate (₹)</th>
+                        )}
+                        {!isSelectedDemo && (
+                          <th className="py-2 px-3 w-28 text-right">Assessable Val (₹)</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -1727,44 +1756,57 @@ function DeliveryChallanManager({
                           <td className="py-2 px-2 border-r border-slate-800 text-center font-bold text-slate-950">
                             {item.qty || 1}
                           </td>
-                          <td className="py-2 px-2 border-r border-slate-800 text-center text-slate-700">
+                          <td className={isSelectedDemo ? "py-2 px-2 text-center text-slate-700" : "py-2 px-2 border-r border-slate-800 text-center text-slate-700"}>
                             {item.unit || 'Nos'}
                           </td>
-                          <td className="py-2 px-3 border-r border-slate-800 text-right font-mono text-slate-800">
-                            {formatNumber(item.rate || 0)}
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono font-bold text-slate-950">
-                            {formatNumber(item.amount || (Number(item.qty || 1) * Number(item.rate || 0)))}
-                          </td>
+                          {!isSelectedDemo && (
+                            <td className="py-2 px-3 border-r border-slate-800 text-right font-mono text-slate-800">
+                              {formatNumber(item.rate || 0)}
+                            </td>
+                          )}
+                          {!isSelectedDemo && (
+                            <td className="py-2 px-3 text-right font-mono font-bold text-slate-950">
+                              {formatNumber(item.amount || (Number(item.qty || 1) * Number(item.rate || 0)))}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
                     <tfoot className="font-bold border-t-2 border-slate-800 bg-slate-50 text-slate-950">
                       <tr>
-                        <td colSpan={isSelectedDemo ? 2 : 3} className="py-2 px-3 border-r border-slate-800 text-right uppercase">
+                        <td colSpan={2} className="py-2 px-3 border-r border-slate-800 text-right uppercase">
                           Total Consignment:
                         </td>
                         <td className="py-2 px-2 border-r border-slate-800 text-center font-black">
                           {selectedChallan.totalQuantity || (Array.isArray(selectedChallan.items) ? selectedChallan.items.reduce((s, i) => s + (Number(i.qty) || 0), 0) : 0)}
                         </td>
-                        <td colSpan={2} className="py-2 px-3 border-r border-slate-800 text-right uppercase">
-                          Total Assessable Value:
+                        <td className={isSelectedDemo ? "py-2 px-2 text-center text-slate-700" : "py-2 px-2 border-r border-slate-800 text-center text-slate-700"}>
+                          Units
                         </td>
-                        <td className="py-2 px-3 text-right font-mono font-black text-slate-950">
-                          {formatCurrency(Number(selectedChallan.totalAssessableValue || selectedChallan.total || 0))}
-                        </td>
+                        {!isSelectedDemo && (
+                          <>
+                            <td colSpan={2} className="py-2 px-3 border-r border-slate-800 text-right uppercase">
+                              Total Assessable Value:
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono font-black text-slate-950">
+                              {formatCurrency(Number(selectedChallan.totalAssessableValue || selectedChallan.total || 0))}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     </tfoot>
                   </table>
                 </div>
 
-                {/* Amount in Words */}
-                <div className="border border-slate-300 rounded px-3 py-2 bg-slate-50 text-[11px]">
-                  <span className="font-bold text-slate-900">Assessable Value in Words: </span>
-                  <span className="italic font-serif font-medium text-slate-900">
-                    {numberToIndianWords(Number(selectedChallan.totalAssessableValue || selectedChallan.total || 0))}
-                  </span>
-                </div>
+                {/* Amount in Words (Strictly hidden for Demo Delivery Challan) */}
+                {!isSelectedDemo && (
+                  <div className="border border-slate-300 rounded px-3 py-2 bg-slate-50 text-[11px]">
+                    <span className="font-bold text-slate-900">Assessable Value in Words: </span>
+                    <span className="italic font-serif font-medium text-slate-900">
+                      {numberToIndianWords(Number(selectedChallan.totalAssessableValue || selectedChallan.total || 0))}
+                    </span>
+                  </div>
+                )}
 
                 {/* Remarks & Notes */}
                 {selectedChallan.remarks && (
