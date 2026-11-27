@@ -86,19 +86,6 @@ function TopHeader({
       {/* Right Controls */}
       <div className="flex items-center space-x-2.5 sm:space-x-3.5 ml-4">
 
-        {/* Sync Across Laptops Button */}
-        {onOpenSync && (
-          <button
-            type="button"
-            onClick={onOpenSync}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100/90 text-blue-700 text-xs font-bold transition-all shadow-2xs active:scale-95 shrink-0 cursor-pointer border border-blue-200/80"
-            title="Transfer or sync data across laptops"
-          >
-            <Laptop className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span className="hidden sm:inline">Sync Laptops</span>
-          </button>
-        )}
-
         {/* Notifications */}
         <div className="relative top-header-menu-container">
           <button
