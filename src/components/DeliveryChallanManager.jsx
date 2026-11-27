@@ -458,7 +458,7 @@ function DeliveryChallanManager({
       updatedAt: new Date().toISOString()
     };
 
-    // Strip Ref Invoice, Ref PO, and Transport Particulars strictly for Demo Delivery Challans
+    // Strip Ref Invoice, Ref PO, Transport Particulars, and HSN/SAC strictly for Demo Delivery Challans
     if (isCurrentDemo) {
       challanDoc.linkedDocNumber = '';
       challanDoc.linkedDocId = '';
@@ -471,6 +471,10 @@ function DeliveryChallanManager({
       challanDoc.lrNumber = '';
       challanDoc.lrDate = '';
       challanDoc.ewayBillNo = '';
+      challanDoc.items = (formData.items || []).map(it => ({
+        ...it,
+        hsn: ''
+      }));
     }
 
     if (!challanDoc.createdAt) {
@@ -1291,7 +1295,7 @@ function DeliveryChallanManager({
                   <tr>
                     <th className="py-2.5 px-3 w-10 text-center">#</th>
                     <th className="py-2.5 px-3">Description of Goods / Machine / Components</th>
-                    <th className="py-2.5 px-3 w-28">HSN / SAC</th>
+                    {!isCurrentDemo && <th className="py-2.5 px-3 w-28">HSN / SAC</th>}
                     <th className="py-2.5 px-3 w-20 text-center">Qty</th>
                     <th className="py-2.5 px-3 w-24">Unit</th>
                     <th className="py-2.5 px-3 w-32 text-right">Unit Rate (₹)</th>
@@ -1319,15 +1323,17 @@ function DeliveryChallanManager({
                           className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-500 mt-1 focus:outline-hidden focus:border-blue-500"
                         />
                       </td>
-                      <td className="py-2.5 px-3">
-                        <input
-                          type="text"
-                          value={item.hsn}
-                          onChange={(e) => handleItemChange(index, 'hsn', e.target.value)}
-                          placeholder=""
-                          className="w-full px-2 py-1.5 font-mono text-center bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
-                        />
-                      </td>
+                      {!isCurrentDemo && (
+                        <td className="py-2.5 px-3">
+                          <input
+                            type="text"
+                            value={item.hsn}
+                            onChange={(e) => handleItemChange(index, 'hsn', e.target.value)}
+                            placeholder=""
+                            className="w-full px-2 py-1.5 font-mono text-center bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-hidden focus:border-blue-500"
+                          />
+                        </td>
+                      )}
                       <td className="py-2.5 px-3 text-center">
                         <input
                           type="number"
@@ -1692,7 +1698,9 @@ function DeliveryChallanManager({
                       <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-800">
                         <th className="py-2 px-2 border-r border-slate-800 w-8 text-center">Sr.</th>
                         <th className="py-2 px-3 border-r border-slate-800">Description of Goods / Machine / Equipment</th>
-                        <th className="py-2 px-2 border-r border-slate-800 w-24 text-center">HSN / SAC</th>
+                        {!isSelectedDemo && (
+                          <th className="py-2 px-2 border-r border-slate-800 w-24 text-center">HSN / SAC</th>
+                        )}
                         <th className="py-2 px-2 border-r border-slate-800 w-16 text-center">Quantity</th>
                         <th className="py-2 px-2 border-r border-slate-800 w-16 text-center">Unit</th>
                         <th className="py-2 px-3 border-r border-slate-800 w-24 text-right">Rate (₹)</th>
@@ -1711,9 +1719,11 @@ function DeliveryChallanManager({
                               <div className="text-[10px] text-slate-600 mt-0.5 leading-tight">{item.description}</div>
                             )}
                           </td>
-                          <td className="py-2 px-2 border-r border-slate-800 text-center font-mono text-[10px]">
-                            {item.hsn || item.hsnCode || '-'}
-                          </td>
+                          {!isSelectedDemo && (
+                            <td className="py-2 px-2 border-r border-slate-800 text-center font-mono text-[10px]">
+                              {item.hsn || item.hsnCode || '-'}
+                            </td>
+                          )}
                           <td className="py-2 px-2 border-r border-slate-800 text-center font-bold text-slate-950">
                             {item.qty || 1}
                           </td>
@@ -1731,7 +1741,7 @@ function DeliveryChallanManager({
                     </tbody>
                     <tfoot className="font-bold border-t-2 border-slate-800 bg-slate-50 text-slate-950">
                       <tr>
-                        <td colSpan={3} className="py-2 px-3 border-r border-slate-800 text-right uppercase">
+                        <td colSpan={isSelectedDemo ? 2 : 3} className="py-2 px-3 border-r border-slate-800 text-right uppercase">
                           Total Consignment:
                         </td>
                         <td className="py-2 px-2 border-r border-slate-800 text-center font-black">
