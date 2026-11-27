@@ -167,7 +167,17 @@ export default function App() {
   const [sharedBanner, setSharedBanner] = useState(null);
   const [incomingSyncData, setIncomingSyncData] = useState(null);
   const [shareQuotation, setShareQuotation] = useState(null);
-  const [previewReturnTab, setPreviewReturnTab] = useState(null);
+  const [previewReturnTab, setPreviewReturnTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('kits_preview_return_tab');
+        if (saved && VALID_TABS.includes(saved)) return saved;
+      } catch {
+        // ignore
+      }
+    }
+    return null;
+  });
   const [proformaInitialMode, setProformaInitialMode] = useState('cards');
   const [invoicesInitialMode, setInvoicesInitialMode] = useState('cards');
   const [challanInitialMode, setChallanInitialMode] = useState('list');
@@ -266,26 +276,32 @@ export default function App() {
           !window.location.hash.includes('share=') && 
           !window.location.hash.includes('sync=') &&
           window.location.hash !== `#${activeTab}`) {
-        window.history.replaceState(null, '', `#${activeTab}`);
+        window.history.replaceState({ tab: activeTab }, '', `#${activeTab}`);
       }
     } catch {
       // ignore
     }
   }, [activeTab]);
 
-  // Handle browser back / forward buttons
+  // Handle browser back / forward buttons (popstate & hashchange)
   useEffect(() => {
-    const handleHashChange = () => {
-      if (typeof window !== 'undefined') {
-        const hash = window.location.hash.replace('#', '').trim();
-        if (VALID_TABS.includes(hash)) {
-          setActiveTab(hash);
-        }
+    const handlePopState = (e) => {
+      // Close open modals if back was pressed
+      if (shareQuotation) { setShareQuotation(null); return; }
+      if (showSettings) { setShowSettings(false); return; }
+      if (showSyncModal) { setShowSyncModal(false); return; }
+      if (incomingSyncData) { setIncomingSyncData(null); return; }
+
+      const hash = (window.location.hash || '').replace('#', '').trim();
+      const target = e.state?.tab || (VALID_TABS.includes(hash) ? hash : 'dashboard');
+      if (VALID_TABS.includes(target)) {
+        setActiveTab(target);
       }
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [shareQuotation, showSettings, showSyncModal, incomingSyncData]);
 
   // Persist active quotation ID
   useEffect(() => {
@@ -449,8 +465,10 @@ export default function App() {
   const handleOpenSettings = useCallback(() => setShowSettings(true), []);
   const handleCloseSettings = useCallback(() => setShowSettings(false), []);
   const [_navHistory, setNavHistory] = useState(['dashboard']);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleSelectTab = useCallback((tab) => {
+  const handleSelectTab = useCallback((tab, pushToHistory = true) => {
+    if (!VALID_TABS.includes(tab)) return;
     if (tab === 'proforma') {
       setProformaSourceQuote(null);
       setProformaInitialMode('cards');
@@ -468,7 +486,16 @@ export default function App() {
     }
     setActiveTab(prev => {
       if (prev !== tab) {
-        setNavHistory(h => [...h.filter(t => t !== tab), prev]);
+        if (pushToHistory) {
+          setNavHistory(h => [...h.filter(t => t !== tab), prev]);
+          if (typeof window !== 'undefined' && !window.location.hash.includes('share=') && !window.location.hash.includes('sync=')) {
+            try {
+              window.history.pushState({ tab }, '', `#${tab}`);
+            } catch {
+              // ignore
+            }
+          }
+        }
       }
       return tab;
     });
@@ -477,70 +504,154 @@ export default function App() {
     }
   }, []);
 
+  const handleRefreshAll = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await loadData();
+      showToast('All data and documents refreshed successfully.');
+    } catch (err) {
+      console.warn('Refresh note:', err);
+      showToast('Data refreshed from local cache.');
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  }, [loadData, showToast]);
+
   const handleGoBack = useCallback(() => {
-    if (activeTab === 'preview' && previewReturnTab) {
-      const target = previewReturnTab;
-      setPreviewReturnTab(null);
-      setActiveTab(target);
+    // 1. Close open modals first
+    if (shareQuotation) { setShareQuotation(null); return; }
+    if (showSettings) { setShowSettings(false); return; }
+    if (showSyncModal) { setShowSyncModal(false); return; }
+    if (incomingSyncData) { setIncomingSyncData(null); return; }
+
+    // 2. If in Preview mode
+    if (activeTab === 'preview') {
+      if (previewReturnTab && previewReturnTab !== 'preview') {
+        const target = previewReturnTab;
+        setPreviewReturnTab(null);
+        handleSelectTab(target);
+        return;
+      }
+      const isDemo = Boolean(currentQuotation?.isDemoChallan || currentQuotation?.documentType === 'Demo Challan' || currentQuotation?.type === 'demo-challan');
+      if (currentQuotation?.isDeliveryChallan || currentQuotation?.documentType === 'Delivery Challan' || currentQuotation?.type === 'challan' || isDemo) {
+        handleSelectTab(isDemo ? 'demo-challans' : 'challans');
+        return;
+      }
+      if (currentQuotation?.isTaxInvoice || currentQuotation?.documentType === 'Tax Invoice' || currentQuotation?.documentType === 'Final Invoice') {
+        handleSelectTab('invoices');
+        return;
+      }
+      if (currentQuotation?.isProforma || currentQuotation?.documentType === 'Proforma Invoice') {
+        handleSelectTab('proforma');
+        return;
+      }
+      handleSelectTab('quotes');
       return;
     }
+
+    // 3. If in Editor
     if (activeTab === 'editor') {
-      setActiveTab('quotes');
+      handleSelectTab('quotes');
       return;
     }
+
+    // 4. If in Proforma create mode
+    if (activeTab === 'proforma' && proformaInitialMode === 'create') {
+      setProformaInitialMode('cards');
+      setProformaSourceQuote(null);
+      return;
+    }
+
+    // 5. If in Invoices create mode
+    if (activeTab === 'invoices' && (invoicesInitialMode === 'create' || invoicesInitialMode === 'tax-invoice')) {
+      setInvoicesInitialMode('cards');
+      setProformaSourceQuote(null);
+      return;
+    }
+
+    // 6. If in Challans create mode
+    if (activeTab === 'challans' && challanInitialMode !== 'list') {
+      setChallanInitialMode('list');
+      setChallanSourceDoc(null);
+      return;
+    }
+
+    // 7. If in Demo Challans create mode
+    if (activeTab === 'demo-challans' && demoChallanInitialMode !== 'list') {
+      setDemoChallanInitialMode('list');
+      setDemoChallanSourceDoc(null);
+      return;
+    }
+
+    // 8. Otherwise step back in navigation history
     setNavHistory(prev => {
       if (prev.length > 0) {
         const next = [...prev];
         const target = next.pop() || 'dashboard';
-        setActiveTab(target);
+        handleSelectTab(target, false);
         return next;
       }
-      setActiveTab('dashboard');
+      handleSelectTab('dashboard', false);
       return [];
     });
-  }, [activeTab, previewReturnTab]);
+  }, [
+    activeTab,
+    previewReturnTab,
+    currentQuotation,
+    proformaInitialMode,
+    invoicesInitialMode,
+    challanInitialMode,
+    demoChallanInitialMode,
+    shareQuotation,
+    showSettings,
+    showSyncModal,
+    incomingSyncData,
+    handleSelectTab
+  ]);
 
   // Handlers for Quotations & Documents
   const handleNewQuotation = useCallback(() => {
     setCurrentQuotation(null);
-    setActiveTab('editor');
-  }, []);
+    handleSelectTab('editor');
+  }, [handleSelectTab]);
 
   const handleCreateProforma = useCallback(() => {
     setProformaSourceQuote(null);
     setProformaInitialMode('create');
-    setActiveTab('proforma');
-  }, []);
+    handleSelectTab('proforma');
+  }, [handleSelectTab]);
 
   const handleCreateFinalInvoice = useCallback(() => {
     setInvoicesInitialMode('tax-invoice');
-    setActiveTab('invoices');
-  }, []);
+    handleSelectTab('invoices');
+  }, [handleSelectTab]);
 
   const handleCreateChallan = useCallback(() => {
     setChallanInitialMode('create');
-    setActiveTab('challans');
-  }, []);
+    handleSelectTab('challans');
+  }, [handleSelectTab]);
 
   const handleCreateDemoChallan = useCallback(() => {
     setDemoChallanInitialMode('create');
-    setActiveTab('demo-challans');
-  }, []);
+    handleSelectTab('demo-challans');
+  }, [handleSelectTab]);
 
   const handleEditQuotation = useCallback((quote) => {
     setCurrentQuotation(quote);
-    setActiveTab('editor');
-  }, []);
+    handleSelectTab('editor');
+  }, [handleSelectTab]);
 
   const handleViewQuotation = useCallback((quote, returnTab) => {
     setCurrentQuotation(quote);
-    if (returnTab) {
-      setPreviewReturnTab(returnTab);
-    } else {
-      setPreviewReturnTab(prev => activeTab !== 'preview' ? activeTab : prev);
+    const originTab = returnTab || (activeTab !== 'preview' ? activeTab : 'quotes');
+    setPreviewReturnTab(originTab);
+    try {
+      localStorage.setItem('kits_preview_return_tab', originTab);
+    } catch {
+      // ignore
     }
-    setActiveTab('preview');
-  }, [activeTab]);
+    handleSelectTab('preview');
+  }, [activeTab, handleSelectTab]);
 
   const handleDeleteQuotation = useCallback(async (id, skipConfirm = false) => {
     if (skipConfirm || window.confirm('Are you sure you want to delete this document?')) {
@@ -771,33 +882,36 @@ export default function App() {
           companySettings={companySettings}
           onQuickAction={handleNewQuotation}
           onToggleSidebar={handleToggleSidebar}
-          onBack={activeTab !== 'dashboard' ? handleGoBack : null}
+          onBack={activeTab !== 'dashboard' || shareQuotation || showSettings || showSyncModal || proformaInitialMode === 'create' || invoicesInitialMode === 'create' || challanInitialMode !== 'list' || demoChallanInitialMode !== 'list' ? handleGoBack : null}
+          onRefresh={handleRefreshAll}
+          isRefreshing={isRefreshing}
         />
 
         {/* Viewport Router - Screen-fit Scroll Area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 lg:p-7 w-full">
           <div className="max-w-[1600px] mx-auto w-full space-y-6">
-            <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
+            <ErrorBoundary onReset={() => handleSelectTab('dashboard')}>
               <Suspense fallback={<ModuleLoader />}>
-              {/* SCREEN 1: DASHBOARD */}
-              {activeTab === 'dashboard' && (
-                <Dashboard
-                  quotations={quotationsOnly}
-                  searchQuery={deferredSearchQuery}
-                  onNewQuotation={handleNewQuotation}
-                  onCreateProforma={handleCreateProforma}
-                  onCreateFinalInvoice={handleCreateFinalInvoice}
-                  onCreateChallan={handleCreateChallan}
-                  onCreateDemoChallan={handleCreateDemoChallan}
-                  onViewQuotation={handleViewQuotation}
-                  onEditQuotation={handleEditQuotation}
-                  onDeleteQuotation={handleDeleteQuotation}
-                  onShareQuotation={(q) => setShareQuotation(q)}
-                  onNavigateTab={(tab) => setActiveTab(tab)}
-                  onConvertToProforma={handleConvertToProforma}
-                  onConvertDocument={handleConvertDocument}
-                />
-              )}
+                <div key={activeTab} className="screen-enter w-full">
+                {/* SCREEN 1: DASHBOARD */}
+                {activeTab === 'dashboard' && (
+                  <Dashboard
+                    quotations={quotationsOnly}
+                    searchQuery={deferredSearchQuery}
+                    onNewQuotation={handleNewQuotation}
+                    onCreateProforma={handleCreateProforma}
+                    onCreateFinalInvoice={handleCreateFinalInvoice}
+                    onCreateChallan={handleCreateChallan}
+                    onCreateDemoChallan={handleCreateDemoChallan}
+                    onViewQuotation={handleViewQuotation}
+                    onEditQuotation={handleEditQuotation}
+                    onDeleteQuotation={handleDeleteQuotation}
+                    onShareQuotation={(q) => setShareQuotation(q)}
+                    onNavigateTab={handleSelectTab}
+                    onConvertToProforma={handleConvertToProforma}
+                    onConvertDocument={handleConvertDocument}
+                  />
+                )}
 
               {/* QUOTATIONS LIST */}
               {activeTab === 'quotes' && (
@@ -967,13 +1081,13 @@ export default function App() {
                     if (andView) {
                       handleViewQuotation(saved);
                     } else {
-                      setActiveTab('proforma');
+                      handleSelectTab('proforma');
                     }
                   }}
                   onViewQuotation={handleViewQuotation}
                   onShareQuotation={(q) => setShareQuotation(q)}
                   onDeleteQuotation={(id) => handleDeleteQuotation(id, true)}
-                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onNavigateTab={handleSelectTab}
                   onConvertDocument={handleConvertDocument}
                 />
               )}
@@ -1002,7 +1116,7 @@ export default function App() {
                   onViewQuotation={handleViewQuotation}
                   onShareQuotation={(q) => setShareQuotation(q)}
                   onDeleteQuotation={(id) => handleDeleteQuotation(id, true)}
-                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onNavigateTab={handleSelectTab}
                   onConvertDocument={handleConvertDocument}
                 />
               )}
@@ -1025,7 +1139,7 @@ export default function App() {
                   onDeleteChallan={(id) => {
                     handleDeleteQuotation(id, true);
                   }}
-                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onNavigateTab={handleSelectTab}
                   onViewQuotation={handleViewQuotation}
                   onConvertDocument={handleConvertDocument}
                   onShareChallan={(ch) => setShareQuotation(ch)}
@@ -1051,7 +1165,7 @@ export default function App() {
                   onDeleteChallan={(id) => {
                     handleDeleteQuotation(id, true);
                   }}
-                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onNavigateTab={handleSelectTab}
                   onViewQuotation={handleViewQuotation}
                   onConvertDocument={handleConvertDocument}
                   onShareChallan={(ch) => setShareQuotation(ch)}
@@ -1090,6 +1204,7 @@ export default function App() {
                   onNavigateTab={handleSelectTab}
                 />
               )}
+                </div>
               </Suspense>
             </ErrorBoundary>
           </div>

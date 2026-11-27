@@ -3,11 +3,12 @@ import {
   Search, 
   Bell, 
   Settings, 
-  ExternalLink,
-  ChevronDown,
-  Menu,
-  ArrowLeft,
-  Laptop
+  ExternalLink, 
+  ChevronDown, 
+  Menu, 
+  ArrowLeft, 
+  Laptop,
+  RefreshCw
 } from 'lucide-react';
 
 const EMPTY_NOTIFICATIONS = [];
@@ -20,7 +21,9 @@ function TopHeader({
   companySettings: _companySettings,
   onQuickAction: _onQuickAction,
   onToggleSidebar,
-  onBack
+  onBack,
+  onRefresh,
+  isRefreshing = false
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -64,7 +67,7 @@ function TopHeader({
             type="button"
             onClick={onBack}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all shadow-2xs active:scale-95 shrink-0 cursor-pointer border border-slate-200/60"
-            title="Go to previous slide"
+            title="Go Back (Previous screen)"
           >
             <ArrowLeft className="w-4 h-4 text-slate-600" />
             <span className="hidden sm:inline">Back</span>
@@ -85,6 +88,20 @@ function TopHeader({
 
       {/* Right Controls */}
       <div className="flex items-center space-x-2.5 sm:space-x-3.5 ml-4">
+
+        {/* Quick Data Refresh Button */}
+        {onRefresh && (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold transition-all shadow-2xs active:scale-95 shrink-0 cursor-pointer border border-slate-200/80 disabled:opacity-60"
+            title="Refresh and sync all data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
+            <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        )}
 
         {/* Notifications */}
         <div className="relative top-header-menu-container">
