@@ -164,13 +164,13 @@ function QuotationPreview({
   const printAreaRef = useRef(null);
 
   const safeQuotation = quotation || {};
-  const isTaxInvoiceDoc = safeQuotation.documentType === 'Tax Invoice' || safeQuotation.isTaxInvoice;
+  const isTaxInvoiceDoc = safeQuotation.documentType === 'Tax Invoice' || safeQuotation.documentType === 'Final Invoice' || safeQuotation.isTaxInvoice;
   const isProformaDoc = !isTaxInvoiceDoc && (safeQuotation.documentType === 'Proforma Invoice' || safeQuotation.isProforma);
 
   const handleDownloadPdf = async () => {
     setIsExporting(true);
     try {
-      const prefix = isTaxInvoiceDoc ? 'KITS_Tax_Invoice_' : (isProformaDoc ? 'KITS_Proforma_' : 'KITS_Quotation_');
+      const prefix = isTaxInvoiceDoc ? 'KITS_Final_Invoice_' : (isProformaDoc ? 'KITS_Proforma_' : 'KITS_Quotation_');
       const sanitizedNumber = (safeQuotation.quotationNumber || 'Document').replace(/[/\\]/g, '_');
       const filename = `${prefix}${sanitizedNumber}.pdf`;
       await exportToPdf('printable-quotation', filename);
@@ -300,7 +300,7 @@ function QuotationPreview({
                 {safeQuotation.quotationNumber || 'Document'}
               </span>
               <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap">
-                {isTaxInvoiceDoc ? 'TAX INV' : (safeQuotation.revision || (isProformaDoc ? 'PI' : 'Rev 0'))}
+                {isTaxInvoiceDoc ? 'FINAL INV' : (safeQuotation.revision || (isProformaDoc ? 'PI' : 'Rev 0'))}
               </span>
               <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-emerald-200 whitespace-nowrap">
                 {isTaxInvoiceDoc ? 'Final Invoice Issued' : (isProformaDoc ? 'Proforma Issued' : (safeQuotation.status || 'Approved'))}
@@ -396,13 +396,11 @@ function QuotationPreview({
                       ORIGINAL FOR RECIPIENT
                     </span>
                     <span className="text-[9.5px] sm:text-[10px] font-bold text-[#0f245c] uppercase tracking-wider font-mono">
-                      {hasTax 
-                        ? (isSoftware ? 'TAX INVOICE • SOFTWARE & IT SERVICES' : 'TAX INVOICE • AUTOMATION WORK')
-                        : (isSoftware ? 'INVOICE • SOFTWARE & IT SERVICES' : 'INVOICE • AUTOMATION WORK')}
+                      {isSoftware ? 'FINAL INVOICE • SOFTWARE & IT SERVICES' : 'FINAL INVOICE • AUTOMATION WORK'}
                     </span>
                   </div>
                   <h2 className="text-base sm:text-lg font-black tracking-widest text-slate-900 uppercase">
-                    {hasTax ? 'TAX INVOICE' : 'INVOICE'}
+                    FINAL INVOICE
                   </h2>
                   {hasTax && (
                     <p className="text-[9px] sm:text-[9.5px] text-slate-600 font-semibold tracking-wider uppercase mt-0.5">
@@ -449,7 +447,7 @@ function QuotationPreview({
                   <div className="p-2 space-y-1.5 flex flex-col justify-between">
                     <div className="space-y-1">
                       <div className="flex justify-between items-baseline border-b border-slate-200 pb-0.5">
-                        <span className="text-slate-600 font-medium text-[10px] uppercase">{hasTax ? 'Tax Invoice No:' : 'Invoice No:'}</span>
+                        <span className="text-slate-600 font-medium text-[10px] uppercase">Final Invoice No:</span>
                         <span className="font-bold font-mono text-slate-950 text-xs sm:text-[11.5px]">{safeQuotation.quotationNumber}</span>
                       </div>
                       <div className="flex justify-between items-baseline border-b border-slate-200 pb-0.5">
@@ -612,7 +610,7 @@ function QuotationPreview({
                       {/* Grand Total */}
                       <tr className="border-t-2 border-black font-bold text-slate-950 bg-slate-100 text-xs sm:text-[12px]">
                         <td colSpan={isSoftware ? 4 : 5} className="py-1.5 px-3 text-right border-r border-black uppercase font-black">
-                          {hasTax ? 'TOTAL TAX INVOICE VALUE (INCL. GST):' : 'TOTAL INVOICE VALUE:'}
+                          {hasTax ? 'TOTAL FINAL INVOICE VALUE (INCL. GST):' : 'TOTAL INVOICE VALUE:'}
                         </td>
                         <td className="py-1.5 px-3 text-right font-mono font-black text-slate-950">
                           ₹{formatNumber(grandTotal, 0)}
@@ -658,8 +656,8 @@ function QuotationPreview({
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5 font-medium">
                     {advanceAmount > 0 
-                      ? 'Tax Invoice reconciliation against Advance received via Proforma Invoice.'
-                      : 'Commercial Tax Invoice statutory summary and settlement.'}
+                      ? 'Final Invoice reconciliation against Advance received via Proforma Invoice.'
+                      : 'Commercial Final Invoice statutory summary and settlement.'}
                   </p>
                 </div>
 
@@ -667,12 +665,12 @@ function QuotationPreview({
                 <div className="border-2 border-slate-900 bg-slate-50/70 p-4 rounded-2xl shadow-xs space-y-3">
                   <div className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-2 flex justify-between items-center">
                     <span>Commercial Account Settlement</span>
-                    <span className="font-mono font-bold text-blue-700">{hasTax ? 'Tax Inv No:' : 'Invoice No:'} {safeQuotation.quotationNumber}</span>
+                    <span className="font-mono font-bold text-blue-700">Final Inv No: {safeQuotation.quotationNumber}</span>
                   </div>
 
                   <div className="space-y-2 text-xs sm:text-[12.5px]">
                     <div className="flex justify-between items-center text-slate-800">
-                      <span className="font-semibold">{hasTax ? 'Gross Tax Invoice Value (Incl. GST):' : 'Gross Invoice Value:'}</span>
+                      <span className="font-semibold">Gross Final Invoice Value (Incl. GST):</span>
                       <span className="font-mono font-bold text-slate-950">₹{formatNumber(grandTotal, 0)}</span>
                     </div>
 

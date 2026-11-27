@@ -40,7 +40,7 @@ function classifyDocument(doc) {
       iconColor: 'text-amber-600'
     };
   }
-  if (doc.isTaxInvoice || doc.documentType === 'Tax Invoice' || doc.documentType === 'Invoice' || (typeof doc.invoiceNo === 'string' && (doc.invoiceNo.includes('/INV/') || doc.invoiceNo.startsWith('INV-')))) {
+  if (doc.isTaxInvoice || doc.documentType === 'Tax Invoice' || doc.documentType === 'Final Invoice' || doc.documentType === 'Invoice' || (typeof doc.invoiceNo === 'string' && (doc.invoiceNo.includes('/INV/') || doc.invoiceNo.startsWith('INV-')))) {
     return { 
       type: 'invoice', 
       label: 'Final Invoice', 

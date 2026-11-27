@@ -38,7 +38,7 @@ function DocumentConvertMenu({
 
   if (!doc || !onConvert) return null;
 
-  const isTaxDoc = Boolean(doc.isTaxInvoice || doc.documentType === 'Tax Invoice');
+  const isTaxDoc = Boolean(doc.isTaxInvoice || doc.documentType === 'Tax Invoice' || doc.documentType === 'Final Invoice');
   const isProformaDoc = Boolean(doc.isProforma || doc.documentType === 'Proforma Invoice');
   const isChallanDoc = Boolean(doc.isDeliveryChallan || doc.documentType === 'Delivery Challan');
   const isDemoChallanDoc = Boolean(
@@ -108,7 +108,7 @@ function DocumentConvertMenu({
             </button>
           )}
 
-          {/* 2. Final Tax Invoice (if not already Tax Invoice) */}
+          {/* 2. Final Invoice (if not already Final Invoice) */}
           {!isTaxDoc && (
             <button
               type="button"
@@ -120,10 +120,10 @@ function DocumentConvertMenu({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-bold text-slate-800 group-hover:text-emerald-700 flex items-center justify-between">
-                  <span>Final Tax Invoice</span>
-                  <span className="text-[9px] font-mono text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-200">GST</span>
+                  <span>Final Invoice</span>
+                  <span className="text-[9px] font-mono text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-200">INV</span>
                 </div>
-                <div className="text-[10px] text-slate-500 leading-tight">Official GST invoice for billing & dispatch</div>
+                <div className="text-[10px] text-slate-500 leading-tight">Official final invoice for billing & dispatch</div>
               </div>
             </button>
           )}

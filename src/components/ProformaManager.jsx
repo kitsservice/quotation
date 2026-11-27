@@ -151,7 +151,7 @@ function ProformaManager({
     const linkable = [];
     for (let i = 0; i < quotations.length; i++) {
       const q = quotations[i];
-      const isTI = q.isTaxInvoice || q.documentType === 'Tax Invoice';
+      const isTI = q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.documentType === 'Final Invoice';
       const isPI = q.isProforma || q.documentType === 'Proforma Invoice';
 
       if (isTI) {
@@ -1483,7 +1483,7 @@ function ProformaManager({
           ) : (
             <div className="space-y-2.5">
               {filteredInvoices.map((inv) => {
-                const isTaxDoc = inv.isTaxInvoice || inv.documentType === 'Tax Invoice';
+                const isTaxDoc = inv.isTaxInvoice || inv.documentType === 'Tax Invoice' || inv.documentType === 'Final Invoice';
                 const advAmt = isTaxDoc 
                   ? (inv.advancePaid !== undefined ? inv.advancePaid : 0)
                   : (inv.advancePayable || Math.round((inv.grandTotal || 0) * (((inv.advancePercent === 50 ? 75 : inv.advancePercent) || 75) / 100)));

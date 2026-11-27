@@ -894,7 +894,7 @@ export default function App() {
                       } else if (currentQuotation?.isDeliveryChallan || currentQuotation?.documentType === 'Delivery Challan') {
                         const isDemo = currentQuotation?.isDemoChallan || currentQuotation?.purpose === 'Demonstration / Exhibition' || (currentQuotation?.challanNo && (currentQuotation.challanNo.includes('DEMO') || currentQuotation.challanNo.includes('DCD')));
                         setActiveTab(isDemo ? 'demo-challans' : 'challans');
-                      } else if (currentQuotation?.isTaxInvoice || currentQuotation?.documentType === 'Tax Invoice') {
+                      } else if (currentQuotation?.isTaxInvoice || currentQuotation?.documentType === 'Tax Invoice' || currentQuotation?.documentType === 'Final Invoice') {
                         setActiveTab('invoices');
                       } else if (currentQuotation?.isProforma || currentQuotation?.documentType === 'Proforma Invoice') {
                         setActiveTab('proforma');
@@ -906,7 +906,7 @@ export default function App() {
                       if (currentQuotation?.isDeliveryChallan || currentQuotation?.documentType === 'Delivery Challan') {
                         const isDemo = currentQuotation?.isDemoChallan || currentQuotation?.purpose === 'Demonstration / Exhibition' || (currentQuotation?.challanNo && (currentQuotation.challanNo.includes('DEMO') || currentQuotation.challanNo.includes('DCD')));
                         setActiveTab(isDemo ? 'demo-challans' : 'challans');
-                      } else if (currentQuotation?.isTaxInvoice || currentQuotation?.documentType === 'Tax Invoice') {
+                      } else if (currentQuotation?.isTaxInvoice || currentQuotation?.documentType === 'Tax Invoice' || currentQuotation?.documentType === 'Final Invoice') {
                         setActiveTab('invoices');
                       } else if (currentQuotation?.isProforma || currentQuotation?.documentType === 'Proforma Invoice') {
                         setProformaSourceQuote(currentQuotation);

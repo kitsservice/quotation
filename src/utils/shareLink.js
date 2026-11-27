@@ -116,7 +116,7 @@ export function cleanDocumentForSharing(doc) {
     validityTerms: validityTerms || '30 days from quotation date',
     exclusions: exclusions || '',
     companyName: 'KITS ROBOTICS & AUTOMATION PVT.LTD.',
-    documentType: documentType || (isDeliveryChallan ? 'Delivery Challan' : isTaxInvoice ? 'Tax Invoice' : isProforma ? 'Proforma Invoice' : 'Quotation'),
+    documentType: documentType || (isDeliveryChallan ? 'Delivery Challan' : isTaxInvoice ? 'Final Invoice' : isProforma ? 'Proforma Invoice' : 'Quotation'),
     isProforma: Boolean(isProforma),
     isTaxInvoice: Boolean(isTaxInvoice),
     isDeliveryChallan: Boolean(isDeliveryChallan),

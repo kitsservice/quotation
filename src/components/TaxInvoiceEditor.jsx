@@ -451,7 +451,7 @@ function TaxInvoiceEditor({
       // Financials
       applyTax: calculations.applyTax,
       hasTax: calculations.applyTax,
-      documentType: calculations.applyTax ? 'Tax Invoice' : 'Invoice',
+      documentType: 'Final Invoice',
       subtotal: calculations.subtotal,
       cgst: calculations.cgstTotal,
       sgst: calculations.sgstTotal,
@@ -465,7 +465,7 @@ function TaxInvoiceEditor({
       // Terms
       terms: formData.terms,
       warrantyTerms: formData.warrantyTerms,
-      status: 'Tax Invoice Issued',
+      status: 'Final Invoice Issued',
       items: formData.items.map(it => ({
         id: it.id,
         title: it.name,

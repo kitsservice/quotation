@@ -80,7 +80,7 @@ function Dashboard({
     let hasOtherDoc = false;
     for (let i = 0; i < list.length; i++) {
       const q = list[i];
-      if (q && (q.isDeliveryChallan || q.documentType === 'Delivery Challan' || q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.isProforma || q.documentType === 'Proforma Invoice')) {
+      if (q && (q.isDeliveryChallan || q.documentType === 'Delivery Challan' || q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.documentType === 'Final Invoice' || q.isProforma || q.documentType === 'Proforma Invoice')) {
         hasOtherDoc = true;
         break;
       }
@@ -89,7 +89,7 @@ function Dashboard({
     return list.filter(q => {
       if (!q) return false;
       const isDC = q.isDeliveryChallan || q.documentType === 'Delivery Challan';
-      const isTI = q.isTaxInvoice || q.documentType === 'Tax Invoice';
+      const isTI = q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.documentType === 'Final Invoice';
       const isPI = q.isProforma || q.documentType === 'Proforma Invoice';
       return !isDC && !isTI && !isPI;
     });

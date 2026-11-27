@@ -149,6 +149,7 @@ function isProperTaxInvoice(doc) {
   return Boolean(
     doc.isTaxInvoice === true ||
     doc.documentType === 'Tax Invoice' ||
+    doc.documentType === 'Final Invoice' ||
     doc.documentType === 'Invoice' ||
     (invNum && (invNum.includes('/INV/') || invNum.startsWith('INV-')))
   );

@@ -93,7 +93,7 @@ function ReportsAnalytics({
         continue;
       }
 
-      const isTI = q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.documentType === 'Invoice' || 
+      const isTI = q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.documentType === 'Final Invoice' || q.documentType === 'Invoice' || 
         (typeof q.invoiceNo === 'string' && (q.invoiceNo.includes('/INV/') || q.invoiceNo.startsWith('INV-')));
       const isPI = q.isProforma || q.documentType === 'Proforma Invoice' || 
         (typeof q.quotationNumber === 'string' && q.quotationNumber.startsWith('PI-')) || 
@@ -266,7 +266,7 @@ function ReportsAnalytics({
       if (!name) return;
       const amt = Number(doc.grandTotal || doc.total || 0);
       const current = map.get(name) || { name, billed: 0, quoted: 0, count: 0 };
-      if (doc.isTaxInvoice || doc.documentType === 'Tax Invoice' || doc.documentType === 'Invoice') {
+      if (doc.isTaxInvoice || doc.documentType === 'Tax Invoice' || doc.documentType === 'Final Invoice' || doc.documentType === 'Invoice') {
         current.billed += amt;
       } else if (doc.isProforma || doc.documentType === 'Proforma Invoice') {
         current.billed += amt;
@@ -966,7 +966,7 @@ function ReportsAnalytics({
                     </tr>
                   ) : (
                     [...taxInvoicesOnly, ...proformaOnly].map((inv) => {
-                      const isTax = inv.isTaxInvoice || inv.documentType === 'Tax Invoice' || inv.documentType === 'Invoice';
+                      const isTax = inv.isTaxInvoice || inv.documentType === 'Tax Invoice' || inv.documentType === 'Final Invoice' || inv.documentType === 'Invoice';
                       return (
                         <tr key={inv.id || inv.invoiceNo || inv.quotationNumber} className="hover:bg-slate-50 transition-colors">
                           <td className="py-3 px-4 font-mono font-bold text-slate-900">

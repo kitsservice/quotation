@@ -493,12 +493,16 @@ export function generateNextTaxInvoiceNumber(existingDocs = [], prefix = 'KITS/I
     const numStr = item.invoiceNo || item.quotationNumber;
     if (numStr) {
       if (numStr.startsWith(basePrefix)) {
-        const num = parseInt(numStr.slice(basePrefix.length).trim(), 10);
-        if (!isNaN(num) && num > maxSeq) {
-          maxSeq = num;
+        const remainder = numStr.slice(basePrefix.length).trim();
+        const match = remainder.match(/(\d+)$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxSeq) {
+            maxSeq = num;
+          }
         }
       } else if (numStr.includes('INV/')) {
-        const match = numStr.match(/INV\/(?:0\d{2}\/\d{2}\/)?(\d+)/i) || numStr.match(/INV\/.*?(\d+)$/i);
+        const match = numStr.match(/(\d+)$/);
         if (match) {
           const num = parseInt(match[1], 10);
           if (!isNaN(num) && num > maxSeq) {
@@ -510,7 +514,7 @@ export function generateNextTaxInvoiceNumber(existingDocs = [], prefix = 'KITS/I
         if (!isNaN(num) && num > maxSeq) {
           maxSeq = num;
         }
-      } else if (item.documentType === 'Tax Invoice' || item.isTaxInvoice) {
+      } else if (item.documentType === 'Tax Invoice' || item.documentType === 'Final Invoice' || item.isTaxInvoice) {
         const match = numStr.match(TRAILING_DIGITS_REGEX);
         if (match) {
           const num = parseInt(match[1], 10);

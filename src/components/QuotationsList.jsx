@@ -45,7 +45,7 @@ function QuotationsList({
     let hasOtherDoc = false;
     for (let i = 0; i < list.length; i++) {
       const q = list[i];
-      if (q && (q.isProforma || q.documentType === 'Proforma Invoice' || q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.isDeliveryChallan || q.documentType === 'Delivery Challan')) {
+      if (q && (q.isProforma || q.documentType === 'Proforma Invoice' || q.isTaxInvoice || q.documentType === 'Tax Invoice' || q.documentType === 'Final Invoice' || q.isDeliveryChallan || q.documentType === 'Delivery Challan')) {
         hasOtherDoc = true;
         break;
       }
@@ -55,7 +55,8 @@ function QuotationsList({
       !q.isProforma && 
       q.documentType !== 'Proforma Invoice' && 
       !q.isTaxInvoice && 
-      q.documentType !== 'Tax Invoice'
+      q.documentType !== 'Tax Invoice' &&
+      q.documentType !== 'Final Invoice'
     );
   }, [quotations]);
 
