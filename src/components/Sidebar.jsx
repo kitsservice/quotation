@@ -5,6 +5,7 @@ import {
   FileCheck2, 
   Receipt, 
   Truck,
+  PackageCheck,
   Users,
   BarChart3, 
   Settings,
@@ -21,6 +22,7 @@ function Sidebar({
   proformaCount = 0,
   invoicesCount = 0,
   challansCount = 0,
+  demoChallansCount = 0,
   customersCount = 0,
   isOpen = true,
   onClose
@@ -34,6 +36,7 @@ function Sidebar({
         { id: 'proforma', label: 'Proforma Invoices', icon: FileCheck2, badge: proformaCount },
         { id: 'invoices', label: 'Final Invoices', icon: Receipt, badge: invoicesCount },
         { id: 'challans', label: 'Delivery Challans', icon: Truck, badge: challansCount },
+        { id: 'demo-challans', label: 'Demo Delivery Challan', icon: PackageCheck, badge: demoChallansCount },
       ]
     },
     {
@@ -49,7 +52,7 @@ function Sidebar({
         { id: 'settings', label: 'Settings & Company', icon: Settings, action: onOpenSettings },
       ]
     }
-  ], [quotationsCount, proformaCount, invoicesCount, challansCount, customersCount, onOpenSettings]);
+  ], [quotationsCount, proformaCount, invoicesCount, challansCount, demoChallansCount, customersCount, onOpenSettings]);
 
   const handleNavClick = (item) => {
     if (item.action) {

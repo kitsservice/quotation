@@ -318,6 +318,11 @@ export function generateNextDeliveryChallanNumber(existingDocs = [], prefix = 'K
   return `${basePrefix}${nextSeq}`;
 }
 
+// Sequential Demo Delivery Challan Number Generator under Rule 55 (e.g. KITS/DEMO/026/11/001)
+export function generateNextDemoChallanNumber(existingDocs = [], prefix = 'KITS/DEMO') {
+  return generateNextDeliveryChallanNumber(existingDocs, prefix);
+}
+
 // Sequential Proforma Invoice Number Generator starting strictly from 1 or linked directly to Quotation
 export function generateNextProformaNumber(existingDocs = [], linkedQuote = null) {
   if (linkedQuote?.quotationNumber) {

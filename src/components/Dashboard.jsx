@@ -18,7 +18,8 @@ import {
   Download,
   FileSpreadsheet,
   TrendingUp,
-  Truck
+  Truck,
+  PackageCheck
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
@@ -38,6 +39,7 @@ function Dashboard({
   onCreateProforma,
   onCreateFinalInvoice,
   onCreateChallan,
+  onCreateDemoChallan,
   onViewQuotation,
   onEditQuotation,
   onDeleteQuotation,
@@ -404,6 +406,29 @@ function Dashboard({
                     </div>
                     <div className="text-[10px] text-slate-400 truncate">
                       Rule 55 goods transport challan
+                    </div>
+                  </div>
+                </button>
+
+                {/* 5. Demo Delivery Challan */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateMenu(false);
+                    if (onCreateDemoChallan) onCreateDemoChallan();
+                    else if (onNavigateTab) onNavigateTab('demo-challans');
+                  }}
+                  className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50/70 transition-colors text-left group cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200/80 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <PackageCheck className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
+                      Demo Delivery Challan
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate">
+                      Rule 55 demo & trial challan
                     </div>
                   </div>
                 </button>

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { 
   Truck, 
+  PackageCheck,
   Plus, 
   Trash2, 
   Eye, 
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatNumber } from '../utils/formatters';
 import { numberToIndianWords } from '../utils/numberToWords';
-import { generateNextDeliveryChallanNumber } from '../services/db';
+import { generateNextDeliveryChallanNumber, generateNextDemoChallanNumber } from '../services/db';
 import { exportToPdf, printDocument } from '../services/pdfGenerator';
 import { KitsDocumentHeader, KitsDocumentFooter } from './KitsHeaderFooter';
 
@@ -46,14 +47,20 @@ function getFormattedTime() {
   return `${hours}:${minutes} ${ampm}`;
 }
 
-function createDefaultFormData(quotations) {
+function createDefaultFormData(quotations, isDemo = false) {
   const todayStr = new Date().toISOString().split('T')[0];
+  const prefix = isDemo ? 'KITS/DEMO' : 'KITS/DC';
+  const challanNo = isDemo 
+    ? generateNextDemoChallanNumber(quotations, prefix)
+    : generateNextDeliveryChallanNumber(quotations, prefix);
+
   return {
     id: '',
-    challanNo: generateNextDeliveryChallanNumber(quotations),
+    challanNo,
     date: todayStr,
     dispatchTime: getFormattedTime(),
-    purpose: 'Installation & Commissioning at Site',
+    purpose: isDemo ? 'Demonstration / Exhibition' : 'Installation & Commissioning at Site',
+    isDemoChallan: Boolean(isDemo),
     linkedDocType: '',
     linkedDocId: '',
     linkedDocNumber: '',
@@ -75,8 +82,10 @@ function createDefaultFormData(quotations) {
     lrNumber: '',
     lrDate: todayStr,
     ewayBillNo: '',
-    status: 'Dispatched',
-    remarks: '1. Goods dispatched strictly for the purpose mentioned above under Rule 55 of CGST Rules, 2017.\n2. This is NOT A SALE INVOICE. No financial sale is affected through this delivery challan.\n3. Consignment to be verified and acknowledged by the receiver upon delivery.',
+    status: isDemo ? 'Demo Dispatched' : 'Dispatched',
+    remarks: isDemo
+      ? '1. Goods dispatched strictly for Demonstration / Exhibition / Testing trial under Rule 55 of CGST Rules, 2017.\n2. NOT FOR SALE. No commercial sale or consideration is involved.\n3. Goods to be returned in good working condition after completion of demonstration.'
+      : '1. Goods dispatched strictly for the purpose mentioned above under Rule 55 of CGST Rules, 2017.\n2. This is NOT A SALE INVOICE. No financial sale is affected through this delivery challan.\n3. Consignment to be verified and acknowledged by the receiver upon delivery.',
     items: [
       {
         id: 'item-1',
@@ -134,6 +143,7 @@ function DeliveryChallanManager({
   quotations = [],
   companySettings = {},
   initialMode = 'list',
+  isDemoModule = false,
   onSaveChallan,
   onDeleteChallan,
   onNavigateTab,
@@ -165,7 +175,7 @@ function DeliveryChallanManager({
 
     if (found) {
       if (onViewQuotation) {
-        onViewQuotation(found, 'challans');
+        onViewQuotation(found, isDemoModule ? 'demo-challans' : 'challans');
       }
     } else {
       alert(`Referenced document "${docNumber}" not found in current records.`);
@@ -179,13 +189,16 @@ function DeliveryChallanManager({
     for (let i = 0; i < quotations.length; i++) {
       const q = quotations[i];
       if (q.isDeliveryChallan || q.documentType === 'Delivery Challan') {
-        challans.push(q);
+        const isDemo = Boolean(q.isDemoChallan || q.purpose === 'Demonstration / Exhibition' || (q.challanNo && q.challanNo.includes('DEMO')));
+        if (isDemoModule ? isDemo : !isDemo) {
+          challans.push(q);
+        }
       } else if (isProperTaxInvoice(q)) {
         invoices.push(q);
       }
     }
     return { deliveryChallans: challans, taxInvoices: invoices };
-  }, [quotations]);
+  }, [quotations, isDemoModule]);
 
   // Filtered Delivery Challans for the listing view
   const filteredChallans = useMemo(() => {
@@ -206,26 +219,29 @@ function DeliveryChallanManager({
   }, [deliveryChallans, filterPurpose, searchQuery]);
 
   // Form State
-  const [formData, setFormData] = useState(() => createDefaultFormData(quotations));
+  const [formData, setFormData] = useState(() => createDefaultFormData(quotations, isDemoModule));
 
   // Quick statistics calculated in a single fast pass
   const stats = useMemo(() => {
     const total = deliveryChallans.length;
     let dispatched = 0;
     let onApproval = 0;
+    let returned = 0;
     let totalValue = 0;
     for (let i = 0; i < total; i++) {
       const c = deliveryChallans[i];
-      if ((c.status || 'Dispatched') === 'Dispatched') dispatched++;
-      if (c.purpose === 'Supply on Approval') onApproval++;
+      const st = c.status || '';
+      if (st.includes('Dispatched')) dispatched++;
+      if (c.purpose === 'Supply on Approval' || st.includes('Progress')) onApproval++;
+      if (st.includes('Returned')) returned++;
       totalValue += Number(c.totalAssessableValue || c.total || 0);
     }
-    return { total, dispatched, onApproval, totalValue };
+    return { total, dispatched, onApproval, returned, totalValue };
   }, [deliveryChallans]);
 
   // Initiate New Challan
   const handleStartCreate = () => {
-    setFormData(createDefaultFormData(quotations));
+    setFormData(createDefaultFormData(quotations, isDemoModule));
     setSelectedChallan(null);
     setViewMode('create');
   };
@@ -429,6 +445,7 @@ function DeliveryChallanManager({
       id: formData.id || 'dc_' + Date.now(),
       documentType: 'Delivery Challan',
       isDeliveryChallan: true,
+      isDemoChallan: Boolean(isDemoModule || formData.isDemoChallan || formData.purpose === 'Demonstration / Exhibition'),
       quotationNumber: formData.challanNo, // Unified identifier
       totalQuantity: calculatedTotalQuantity,
       totalAssessableValue: calculatedAssessableValue,
@@ -458,7 +475,8 @@ function DeliveryChallanManager({
     setIsExporting(true);
     try {
       const sanitizedNumber = (selectedChallan?.challanNo || 'Delivery_Challan').replace(/[/\\]/g, '_');
-      await exportToPdf('printable-delivery-challan', `KITS_Delivery_Challan_${sanitizedNumber}.pdf`);
+      const filenamePrefix = (isDemoModule || selectedChallan?.isDemoChallan) ? 'KITS_Demo_Challan_' : 'KITS_Delivery_Challan_';
+      await exportToPdf('printable-delivery-challan', `${filenamePrefix}${sanitizedNumber}.pdf`);
     } catch (err) {
       console.error('Failed to export Delivery Challan PDF:', err);
     } finally {
@@ -488,18 +506,30 @@ function DeliveryChallanManager({
                   <ArrowLeft className="w-5 h-5" />
                 </button>
               )}
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
-                <Truck className="w-6 h-6" />
+              <div className={`w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-md shrink-0 ${
+                isDemoModule 
+                  ? 'bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-700 shadow-indigo-500/20' 
+                  : 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-blue-500/20'
+              }`}>
+                {isDemoModule ? <PackageCheck className="w-6 h-6" /> : <Truck className="w-6 h-6" />}
               </div>
               <div>
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-bold text-slate-900 tracking-tight">Delivery Challans</h1>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                    Rule 55 CGST
+                  <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                    {isDemoModule ? 'Demo Delivery Challan' : 'Delivery Challans'}
+                  </h1>
+                  <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${
+                    isDemoModule 
+                      ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                      : 'bg-blue-50 text-blue-700 border-blue-200'
+                  }`}>
+                    {isDemoModule ? 'Rule 55 Demonstration' : 'Rule 55 CGST'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Generate statutory goods transport challans without sales invoices for installations, job work, and trials.
+                  {isDemoModule 
+                    ? 'Statutory goods delivery challans strictly for customer demonstration, trials, exhibitions & testing.' 
+                    : 'Generate statutory goods transport challans without sales invoices for installations, job work, and trials.'}
                 </p>
               </div>
             </div>
@@ -510,7 +540,7 @@ function DeliveryChallanManager({
                 className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ Create Delivery Challan</span>
+                <span>{isDemoModule ? '+ Create Demo Challan' : '+ Create Delivery Challan'}</span>
               </button>
             </div>
           </div>
@@ -518,18 +548,26 @@ function DeliveryChallanManager({
           {/* KPI Metrics Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-white px-3.5 py-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Challans</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                {isDemoModule ? 'Total Demo Challans' : 'Total Challans'}
+              </span>
               <span className="text-lg font-black text-slate-900 font-mono mt-0.5 block">{stats.total}</span>
             </div>
 
             <div className="bg-white px-3.5 py-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Dispatched</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                {isDemoModule ? 'Active in Demo' : 'Dispatched'}
+              </span>
               <span className="text-lg font-black text-emerald-600 font-mono mt-0.5 block">{stats.dispatched}</span>
             </div>
 
             <div className="bg-white px-3.5 py-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">On Approval</span>
-              <span className="text-lg font-black text-amber-600 font-mono mt-0.5 block">{stats.onApproval}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                {isDemoModule ? 'Returned to Factory' : 'On Approval'}
+              </span>
+              <span className="text-lg font-black text-amber-600 font-mono mt-0.5 block">
+                {isDemoModule ? stats.returned : stats.onApproval}
+              </span>
             </div>
 
             <div className="bg-white px-3.5 py-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
@@ -544,7 +582,7 @@ function DeliveryChallanManager({
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search by Challan No, Customer, Vehicle No, E-Way Bill..."
+                placeholder={isDemoModule ? "Search by Demo Challan No, Customer, Machine, Vehicle..." : "Search by Challan No, Customer, Vehicle No, E-Way Bill..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -569,15 +607,21 @@ function DeliveryChallanManager({
           {/* Challans List / Cards */}
           {filteredChallans.length === 0 ? (
             <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center space-y-4">
-              <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-                <Truck className="w-7 h-7" />
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto shadow-inner ${
+                isDemoModule ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
+              }`}>
+                {isDemoModule ? <PackageCheck className="w-7 h-7" /> : <Truck className="w-7 h-7" />}
               </div>
               <div className="max-w-md mx-auto space-y-1.5">
-                <h3 className="text-base font-bold text-slate-800">No Delivery Challans Found</h3>
+                <h3 className="text-base font-bold text-slate-800">
+                  {isDemoModule ? 'No Demo Delivery Challans Found' : 'No Delivery Challans Found'}
+                </h3>
                 <p className="text-xs text-slate-500">
                   {searchQuery 
                     ? 'No challans matched your search query. Try clearing the filters.' 
-                    : 'Create your first Delivery Challan under Rule 55 to transport goods, machines, automation panels, and demo units safely.'}
+                    : isDemoModule
+                      ? 'Generate your first Demo Delivery Challan under Rule 55 for customer demonstrations, equipment trials, and exhibitions.'
+                      : 'Create your first Delivery Challan under Rule 55 to transport goods, machines, automation panels, and demo units safely.'}
                 </p>
               </div>
               <button
@@ -585,7 +629,7 @@ function DeliveryChallanManager({
                 className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ Create Delivery Challan</span>
+                <span>{isDemoModule ? '+ Create Demo Challan' : '+ Create Delivery Challan'}</span>
               </button>
             </div>
           ) : (
@@ -760,10 +804,14 @@ function DeliveryChallanManager({
               </button>
               <div>
                 <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-                  {formData.id ? `Edit Delivery Challan (${formData.challanNo})` : 'Create Delivery Challan (Rule 55)'}
+                  {formData.id 
+                    ? `Edit ${isDemoModule ? 'Demo Challan' : 'Delivery Challan'} (${formData.challanNo})` 
+                    : isDemoModule ? 'Create Demo Delivery Challan' : 'Create Delivery Challan (Rule 55)'}
                 </h1>
                 <p className="text-xs text-slate-500">
-                  Statutory CGST Rule 55 Delivery Challan for movement of goods without tax invoice.
+                  {isDemoModule 
+                    ? 'Statutory CGST Rule 55 Delivery Challan for equipment demonstrations, client trials & exhibitions.' 
+                    : 'Statutory CGST Rule 55 Delivery Challan for movement of goods without tax invoice.'}
                 </p>
               </div>
             </div>
@@ -1369,10 +1417,14 @@ function DeliveryChallanManager({
               <div>
                 <div className="flex items-center space-x-2">
                   <h2 className="text-base font-bold text-slate-900">
-                    Delivery Challan: {selectedChallan.challanNo || selectedChallan.quotationNumber}
+                    {isDemoModule || selectedChallan?.isDemoChallan ? 'Demo Delivery Challan' : 'Delivery Challan'}: {selectedChallan.challanNo || selectedChallan.quotationNumber}
                   </h2>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                    Rule 55
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    isDemoModule || selectedChallan?.isDemoChallan 
+                      ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                      : 'bg-blue-50 text-blue-700 border-blue-200'
+                  }`}>
+                    {isDemoModule || selectedChallan?.isDemoChallan ? 'Rule 55 Demo' : 'Rule 55'}
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 mt-0.5">
@@ -1448,11 +1500,18 @@ function DeliveryChallanManager({
                   </div>
 
                   <h2 className="text-xl font-black tracking-wider text-slate-950 uppercase font-serif">
-                    DELIVERY CHALLAN
+                    {isDemoModule || selectedChallan?.isDemoChallan ? 'DEMO DELIVERY CHALLAN' : 'DELIVERY CHALLAN'}
                   </h2>
                   <div className="text-[9.5px] font-bold text-slate-700 tracking-wide mt-0.5 uppercase">
-                    (ISSUED UNDER RULE 55 OF CGST RULES, 2017 FOR TRANSPORTATION OF GOODS WITHOUT INVOICE)
+                    {isDemoModule || selectedChallan?.isDemoChallan
+                      ? '(ISSUED UNDER RULE 55 OF CGST RULES, 2017 FOR DEMONSTRATION / EXHIBITION - NOT FOR SALE)'
+                      : '(ISSUED UNDER RULE 55 OF CGST RULES, 2017 FOR TRANSPORTATION OF GOODS WITHOUT INVOICE)'}
                   </div>
+                  {(isDemoModule || selectedChallan?.isDemoChallan) && (
+                    <div className="mt-1.5 py-1 px-3 bg-amber-50 border border-amber-300 rounded text-center text-[9.5px] font-black text-amber-900 tracking-wider uppercase">
+                      NON-COMMERCIAL / DEMO CONSIGNMENT • NOT FOR SALE • RETURNABLE EQUIPMENT
+                    </div>
+                  )}
                 </div>
 
                 {/* Details Top Grid */}
