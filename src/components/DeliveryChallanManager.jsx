@@ -221,6 +221,10 @@ function DeliveryChallanManager({
   // Form State
   const [formData, setFormData] = useState(() => createDefaultFormData(quotations, isDemoModule));
 
+  // Determine if currently working with a Demo Delivery Challan
+  const isCurrentDemo = Boolean(isDemoModule || formData?.isDemoChallan || formData?.purpose === 'Demonstration / Exhibition' || (formData?.challanNo && formData.challanNo.includes('DEMO')));
+  const isSelectedDemo = Boolean(isDemoModule || selectedChallan?.isDemoChallan || selectedChallan?.purpose === 'Demonstration / Exhibition' || (selectedChallan?.challanNo && selectedChallan.challanNo.includes('DEMO')));
+
   // Quick statistics calculated in a single fast pass
   const stats = useMemo(() => {
     const total = deliveryChallans.length;
@@ -453,6 +457,15 @@ function DeliveryChallanManager({
       subtotal: calculatedAssessableValue,
       updatedAt: new Date().toISOString()
     };
+
+    // Strip Ref Invoice and Ref PO fields strictly for Demo Delivery Challans
+    if (isCurrentDemo) {
+      challanDoc.linkedDocNumber = '';
+      challanDoc.linkedDocId = '';
+      challanDoc.linkedDocType = '';
+      challanDoc.customerPoNo = '';
+      challanDoc.customerPoDate = '';
+    }
 
     if (!challanDoc.createdAt) {
       challanDoc.createdAt = new Date().toISOString();
@@ -708,7 +721,7 @@ function DeliveryChallanManager({
                             ({itemCount} {itemCount === 1 ? 'Item' : 'Items'})
                           </span>
                         </div>
-                        {ch.linkedDocNumber ? (
+                        {!isDemoModule && ch.linkedDocNumber ? (
                           <button
                             type="button"
                             onClick={() => handleOpenLinkedDocument(ch.linkedDocNumber, ch.linkedDocId)}
@@ -718,7 +731,7 @@ function DeliveryChallanManager({
                             <FileText className="w-3 h-3 shrink-0" />
                             <span className="truncate">Ref Inv: {ch.linkedDocNumber}</span>
                           </button>
-                        ) : ch.customerPoNo ? (
+                        ) : !isDemoModule && ch.customerPoNo ? (
                           <div className="text-[10.5px] text-slate-500 truncate">
                             PO: <strong className="font-mono text-slate-700">{ch.customerPoNo}</strong>
                           </div>
@@ -842,37 +855,39 @@ function DeliveryChallanManager({
             </div>
           </div>
 
-          {/* Quick Import from Tax Invoices (Proper Invoices only) */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50/60 p-4 rounded-2xl border border-blue-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Receipt className="w-5 h-5" />
+          {/* Quick Import from Tax Invoices (Standard Challans only) */}
+          {!isCurrentDemo && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50/60 p-4 rounded-2xl border border-blue-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900">1-Click Auto-Fill from Final Invoice</div>
+                  <div className="text-[11px] text-slate-600">Select an existing final invoice to populate customer info, transport logistics, and line items.</div>
+                </div>
               </div>
-              <div>
-                <div className="text-xs font-bold text-slate-900">1-Click Auto-Fill from Final Invoice</div>
-                <div className="text-[11px] text-slate-600">Select an existing final invoice to populate customer info, transport logistics, and line items.</div>
-              </div>
-            </div>
 
-            <div className="flex items-center space-x-2">
-              <select
-                value={formData.linkedDocId || ''}
-                onChange={(e) => handleImportInvoice(e.target.value)}
-                className="bg-white border border-blue-300 rounded-xl text-xs font-semibold text-slate-800 px-3 py-2 shadow-2xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              >
-                <option value="">-- Select Final Invoice to Import --</option>
-                {taxInvoices.length === 0 ? (
-                  <option value="" disabled>No Final Invoices Found</option>
-                ) : (
-                  taxInvoices.map(d => (
-                    <option key={d.id} value={d.id}>
-                      {d.invoiceNo || d.quotationNumber} — {d.clientName || d.customerName || 'Untitled'} ({formatCurrency(d.grandTotal || d.total || 0, false)})
-                    </option>
-                  ))
-                )}
-              </select>
+              <div className="flex items-center space-x-2">
+                <select
+                  value={formData.linkedDocId || ''}
+                  onChange={(e) => handleImportInvoice(e.target.value)}
+                  className="bg-white border border-blue-300 rounded-xl text-xs font-semibold text-slate-800 px-3 py-2 shadow-2xs focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                >
+                  <option value="">-- Select Final Invoice to Import --</option>
+                  {taxInvoices.length === 0 ? (
+                    <option value="" disabled>No Final Invoices Found</option>
+                  ) : (
+                    taxInvoices.map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.invoiceNo || d.quotationNumber} — {d.clientName || d.customerName || 'Untitled'} ({formatCurrency(d.grandTotal || d.total || 0, false)})
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* SECTION 1: Challan Identification & Nature of Removal */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
@@ -929,14 +944,25 @@ function DeliveryChallanManager({
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
                 >
-                  <option value="Dispatched">Dispatched</option>
-                  <option value="In Transit">In Transit</option>
-                  <option value="Delivered">Delivered &amp; Acknowledged</option>
-                  <option value="Returned">Returned / Completed</option>
+                  {isCurrentDemo ? (
+                    <>
+                      <option value="Demo Dispatched">Demo Dispatched</option>
+                      <option value="Demo in Progress">Demo in Progress / On Trial</option>
+                      <option value="Returned to Factory">Returned to Factory</option>
+                      <option value="Converted to Order">Converted to Order / PO</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Dispatched">Dispatched</option>
+                      <option value="In Transit">In Transit</option>
+                      <option value="Delivered">Delivered &amp; Acknowledged</option>
+                      <option value="Returned">Returned / Completed</option>
+                    </>
+                  )}
                 </select>
               </div>
 
-              <div>
+              <div className={isCurrentDemo ? "sm:col-span-2 lg:col-span-4" : ""}>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                   Nature / Purpose (Rule 55) <span className="text-rose-500">*</span>
                 </label>
@@ -951,43 +977,48 @@ function DeliveryChallanManager({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Ref Final Invoice No.
-                </label>
-                <input
-                  type="text"
-                  value={formData.linkedDocNumber}
-                  onChange={(e) => setFormData({ ...formData, linkedDocNumber: e.target.value })}
-                  placeholder=""
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-blue-700 focus:bg-white focus:outline-hidden focus:border-blue-500"
-                />
-              </div>
+              {/* Ref Final Invoice and PO columns are strictly hidden for Demo Delivery Challan */}
+              {!isCurrentDemo && (
+                <>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      Ref Final Invoice No.
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.linkedDocNumber}
+                      onChange={(e) => setFormData({ ...formData, linkedDocNumber: e.target.value })}
+                      placeholder=""
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-blue-700 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Ref PO / Work Order No.
-                </label>
-                <input
-                  type="text"
-                  value={formData.customerPoNo}
-                  onChange={(e) => setFormData({ ...formData, customerPoNo: e.target.value })}
-                  placeholder=""
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
-                />
-              </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      Ref PO / Work Order No.
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.customerPoNo}
+                      onChange={(e) => setFormData({ ...formData, customerPoNo: e.target.value })}
+                      placeholder=""
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Ref PO Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.customerPoDate}
-                  onChange={(e) => setFormData({ ...formData, customerPoDate: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
-                />
-              </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      Ref PO Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.customerPoDate}
+                      onChange={(e) => setFormData({ ...formData, customerPoDate: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -1559,13 +1590,13 @@ function DeliveryChallanManager({
                         <span className="font-mono font-bold text-slate-950">{selectedChallan.ewayBillNo}</span>
                       </div>
                     )}
-                    {selectedChallan.linkedDocNumber && (
+                    {!isSelectedDemo && selectedChallan.linkedDocNumber && (
                       <div className="grid grid-cols-[130px_1fr]">
                         <span className="font-bold text-slate-900">Ref Final Invoice:</span>
                         <span className="font-mono font-bold text-slate-950">{selectedChallan.linkedDocNumber}</span>
                       </div>
                     )}
-                    {selectedChallan.customerPoNo && (
+                    {!isSelectedDemo && selectedChallan.customerPoNo && (
                       <div className="grid grid-cols-[130px_1fr]">
                         <span className="font-bold text-slate-900">Ref PO / Order No.:</span>
                         <span className="text-slate-800">{selectedChallan.customerPoNo}</span>
