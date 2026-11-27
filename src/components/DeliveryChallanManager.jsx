@@ -38,15 +38,6 @@ const TRANSPORT_MODES = ['Road', 'Courier', 'Hand Delivery', 'Rail', 'Air'];
 
 const UNIT_OPTIONS = ['Nos', 'Sets', 'Lot', 'Pcs', 'Kg', 'Meters', 'Boxes', 'Pairs'];
 
-function getFormattedTime() {
-  const d = new Date();
-  let hours = d.getHours();
-  const minutes = d.getMinutes().toString().padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12;
-  return `${hours}:${minutes} ${ampm}`;
-}
-
 export const DEFAULT_DEMO_TERMS = `1. The above-mentioned materials are supplied solely for a 7-day demonstration/trial of the IOT PID Based Temperature Monitoring system.
 2. The demonstration is provided Free of Cost (₹0/-).
 3. All materials listed above remain the property of KITS Robotics and Automation Pvt. Ltd. and are to be returned in good working condition upon completion of the demonstration period.
@@ -63,7 +54,7 @@ function createDefaultFormData(quotations, isDemo = false) {
     id: '',
     challanNo,
     date: todayStr,
-    dispatchTime: getFormattedTime(),
+    dispatchTime: '',
     purpose: isDemo ? 'Demonstration / Exhibition' : 'Installation & Commissioning at Site',
     projectName: isDemo ? 'IOT PID Based Temperature Monitoring system' : '',
     isDemoChallan: Boolean(isDemo),
@@ -262,7 +253,7 @@ function DeliveryChallanManager({
       id: ch.id || '',
       challanNo: ch.challanNo || ch.quotationNumber || (isDemoModule ? generateNextDemoChallanNumber(quotations) : generateNextDeliveryChallanNumber(quotations)),
       date: ch.date || ch.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-      dispatchTime: ch.dispatchTime || '11:00 AM',
+      dispatchTime: ch.dispatchTime || '',
       purpose: ch.purpose || 'Installation & Commissioning at Site',
       projectName: ch.projectName || '',
       linkedDocType: ch.linkedDocType || '',
@@ -320,7 +311,7 @@ function DeliveryChallanManager({
       challanNo: nextNo,
       quotationNumber: nextNo,
       date: new Date().toISOString().split('T')[0],
-      dispatchTime: getFormattedTime(),
+      dispatchTime: '',
       createdAt: new Date().toISOString()
     };
     handleStartEdit(duplicated);
@@ -968,7 +959,7 @@ function DeliveryChallanManager({
                   type="text"
                   value={formData.dispatchTime}
                   onChange={(e) => setFormData({ ...formData, dispatchTime: e.target.value })}
-                  placeholder=""
+                  placeholder="e.g. 11:00 AM (Optional)"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
                 />
               </div>
@@ -1639,7 +1630,7 @@ function DeliveryChallanManager({
                     </div>
                     <div className="grid grid-cols-[130px_1fr]">
                       <span className="font-bold text-slate-900">Time of Removal:</span>
-                      <span className="text-slate-800">{selectedChallan.dispatchTime || '11:00 AM'}</span>
+                      <span className="text-slate-800">{selectedChallan.dispatchTime || ''}</span>
                     </div>
                     <div className="grid grid-cols-[130px_1fr]">
                       <span className="font-bold text-slate-900">Nature of Removal:</span>
