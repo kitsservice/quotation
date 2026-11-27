@@ -6,7 +6,8 @@ import {
   ExternalLink,
   ChevronDown,
   Menu,
-  ArrowLeft
+  ArrowLeft,
+  Laptop
 } from 'lucide-react';
 
 const EMPTY_NOTIFICATIONS = [];
@@ -15,6 +16,7 @@ function TopHeader({
   searchQuery,
   setSearchQuery,
   onOpenSettings,
+  onOpenSync,
   companySettings: _companySettings,
   onQuickAction: _onQuickAction,
   onToggleSidebar,
@@ -82,7 +84,20 @@ function TopHeader({
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center space-x-3.5 ml-4">
+      <div className="flex items-center space-x-2.5 sm:space-x-3.5 ml-4">
+
+        {/* Sync Across Laptops Button */}
+        {onOpenSync && (
+          <button
+            type="button"
+            onClick={onOpenSync}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100/90 text-blue-700 text-xs font-bold transition-all shadow-2xs active:scale-95 shrink-0 cursor-pointer border border-blue-200/80"
+            title="Transfer or sync data across laptops"
+          >
+            <Laptop className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span className="hidden sm:inline">Sync Laptops</span>
+          </button>
+        )}
 
         {/* Notifications */}
         <div className="relative top-header-menu-container">
@@ -162,6 +177,18 @@ function TopHeader({
                 <div className="text-[11px] text-slate-400 font-mono mt-0.5">GSTIN: 27AAMCK1536C1ZP</div>
               </div>
               <div className="py-1">
+                {onOpenSync && (
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onOpenSync();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-4 py-2 hover:bg-slate-50 text-slate-700 font-medium"
+                  >
+                    <Laptop className="w-4 h-4 text-blue-600" />
+                    <span>Sync Between Laptops</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setShowUserMenu(false);

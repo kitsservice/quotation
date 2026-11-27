@@ -108,3 +108,35 @@ export async function getDbInstance(customConfig = null) {
 
 export const isFirebaseActive = () => isConfigured;
 export const getDb = () => firestoreDb;
+
+/**
+ * Verifies live connectivity with Google Cloud Firestore.
+ * Performs an actual read check so the user knows if the Cloud database is live or not created yet.
+ */
+export async function testFirestoreConnection(customConfig = null) {
+  try {
+    const res = await initFirebase(customConfig);
+    if (!res.isConfigured || !res.db) {
+      return { ok: false, error: res.error || 'Configuration incomplete' };
+    }
+
+    const { doc, getDoc } = await import('firebase/firestore');
+    const testPromise = getDoc(doc(res.db, 'settings', 'ping'));
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Connection timed out. Check internet or Firebase setup.')), 4500)
+    );
+
+    await Promise.race([testPromise, timeoutPromise]);
+    return { ok: true, error: null };
+  } catch (err) {
+    const msg = err.message || '';
+    if (msg.includes('not-found') || msg.includes('NOT_FOUND') || msg.includes('does not exist')) {
+      return { 
+        ok: false, 
+        notFound: true,
+        error: 'Database not initialized. Please click "Create Database" in Firebase Console (Firestore Database) to enable real-time cloud sync.' 
+      };
+    }
+    return { ok: false, error: msg };
+  }
+}

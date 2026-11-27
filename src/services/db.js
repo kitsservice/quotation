@@ -693,17 +693,56 @@ export async function importDatabaseBackup(backupData) {
   }
 
   if (Array.isArray(backupData.quotations)) {
-    cachedQuotations = backupData.quotations;
-    safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, backupData.quotations);
+    const existing = getLocalQuotations();
+    const merged = [...backupData.quotations];
+    const existingMap = new Map();
+    for (let i = 0; i < backupData.quotations.length; i++) {
+      const q = backupData.quotations[i];
+      if (q?.id) existingMap.set(q.id, true);
+    }
+    for (let i = 0; i < existing.length; i++) {
+      const q = existing[i];
+      if (q?.id && !existingMap.has(q.id)) {
+        merged.push(q);
+      }
+    }
+    merged.sort((a, b) => new Date((b && (b.updatedAt || b.date)) || 0) - new Date((a && (a.updatedAt || a.date)) || 0));
+    cachedQuotations = merged;
+    safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, merged);
   }
+
   if (Array.isArray(backupData.clients)) {
-    cachedClients = backupData.clients;
-    safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, backupData.clients);
+    const existing = getLocalClients();
+    const combined = [...backupData.clients, ...existing];
+    const deduped = [];
+    const seen = new Set();
+    for (let i = 0; i < combined.length; i++) {
+      const c = combined[i];
+      if (!c) continue;
+      const key = (c.companyName || '').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(c);
+    }
+    cachedClients = deduped;
+    safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, deduped);
   }
+
   if (Array.isArray(backupData.products)) {
-    cachedProducts = backupData.products;
-    safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, backupData.products);
+    const existing = getLocalProducts();
+    const combined = [...backupData.products];
+    const seenNames = new Set(backupData.products.map(p => (p.name || '').trim().toLowerCase()));
+    for (let i = 0; i < existing.length; i++) {
+      const p = existing[i];
+      const key = (p.name || '').trim().toLowerCase();
+      if (key && !seenNames.has(key)) {
+        combined.push(p);
+      }
+    }
+    cachedProducts = combined;
+    safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, combined);
   }
+
   if (backupData.settings && typeof backupData.settings === 'object') {
     normalizeCompanySettings(backupData.settings);
     cachedCompanySettings = backupData.settings;

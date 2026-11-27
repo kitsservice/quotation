@@ -9,15 +9,24 @@ import {
   RefreshCw, 
   Download,
   RotateCcw,
-  HardDrive
+  HardDrive,
+  Copy,
+  Check,
+  Laptop
 } from 'lucide-react';
-import { initFirebase, isFirebaseActive, getStoredFirebaseConfig, resetFirebaseCooldown } from '../services/firebase';
+import { 
+  isFirebaseActive, 
+  getStoredFirebaseConfig, 
+  resetFirebaseCooldown,
+  testFirestoreConnection
+} from '../services/firebase';
 import { 
   syncAllToFirebase, 
   exportDatabaseBackup, 
   importDatabaseBackup, 
   resetToFactoryDefaultData 
 } from '../services/db';
+import { buildFullSyncUrl } from '../utils/shareLink';
 
 function SettingsModal({
   isOpen,
@@ -37,6 +46,21 @@ function SettingsModal({
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
   const [backupMessage, setBackupMessage] = useState('');
+  const [syncLinkCopied, setSyncLinkCopied] = useState(false);
+  const [syncUrl, setSyncUrl] = useState('');
+
+  const handleCopySyncLink = async () => {
+    try {
+      const backup = exportDatabaseBackup();
+      const url = await buildFullSyncUrl(backup);
+      setSyncUrl(url);
+      navigator.clipboard.writeText(url);
+      setSyncLinkCopied(true);
+      setTimeout(() => setSyncLinkCopied(false), 2500);
+    } catch (err) {
+      alert('Error generating sync link: ' + err.message);
+    }
+  };
 
   // Keep modal form state in sync when companySettings changes
   const [prevSettings, setPrevSettings] = useState(companySettings);
@@ -77,18 +101,18 @@ function SettingsModal({
   // Test & Save Firebase Config
   const handleTestAndSaveFirebase = async (e) => {
     e.preventDefault();
-    setFirebaseStatus({ active: false, testing: true, message: 'Connecting to Firebase...' });
+    setFirebaseStatus({ active: false, testing: true, message: 'Connecting and verifying Firestore database...' });
 
     try {
       resetFirebaseCooldown();
       localStorage.setItem('kits_firebase_config', JSON.stringify(firebaseConfig));
-      const result = await initFirebase(firebaseConfig);
+      const result = await testFirestoreConnection(firebaseConfig);
 
-      if (result.isConfigured) {
+      if (result.ok) {
         setFirebaseStatus({
           active: true,
           testing: false,
-          message: 'Connected successfully to Firebase Firestore!'
+          message: 'Connected successfully to Firebase Firestore! Real-time cloud sync is active across all devices.'
         });
       } else {
         setFirebaseStatus({
@@ -653,10 +677,48 @@ function SettingsModal({
           {activeTab === 'backup' && (
             <div className="space-y-5">
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                <span className="font-bold text-slate-900 text-sm block">Database Export & Import</span>
+                <span className="font-bold text-slate-900 text-sm block">Database Export & Multi-Laptop Sync</span>
                 <p className="text-slate-500 text-xs">
-                  Easily backup your entire workspace (all quotations, clients, items, and company settings) to a single JSON file. You can restore this file anytime on any computer.
+                  Easily transfer your workspace (all quotations, clients, items, and company settings) to another laptop via link or file.
                 </p>
+              </div>
+
+              {/* Direct Laptop-to-Laptop Transfer Card */}
+              <div className="p-4 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 border border-blue-200/80 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Laptop className="w-4 h-4 text-blue-600" />
+                    <span className="font-bold text-slate-900 text-xs">Transfer All Data to Another Laptop (One-Click Link)</span>
+                  </div>
+                  <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">
+                    Fastest
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600">
+                  Generate a one-click transfer link containing all your quotations, clients, and items. Open it on your other laptop to sync instantly!
+                </p>
+                <div className="flex items-center space-x-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleCopySyncLink}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    {syncLinkCopied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-white" />
+                        <span>Link Copied! Open on other laptop</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-white" />
+                        <span>Copy Multi-Laptop Transfer Link</span>
+                      </>
+                    )}
+                  </button>
+                  {syncUrl && (
+                    <span className="text-[11px] text-emerald-700 font-medium">Link ready to paste</span>
+                  )}
+                </div>
               </div>
 
               {backupMessage && (

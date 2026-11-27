@@ -17,9 +17,20 @@ import {
   saveProduct,
   deleteProduct,
   fetchCompanySettings, 
-  saveCompanySettings 
+  saveCompanySettings,
+  importDatabaseBackup
 } from './services/db';
-import { CheckCircle2, AlertTriangle, Info, X, FileText } from 'lucide-react';
+import { 
+  CheckCircle2, 
+  AlertTriangle, 
+  Info, 
+  X, 
+  FileText,
+  ExternalLink,
+  Download,
+  Laptop
+} from 'lucide-react';
+import { parseIncomingSharePayload, clearShareUrlHash } from './utils/shareLink';
 
 // Lazy-loaded views for blazing-fast initial paint & zero bundle bloat
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -33,6 +44,7 @@ const ProductsManager = lazy(() => import('./components/ProductsManager'));
 const ReportsAnalytics = lazy(() => import('./components/ReportsAnalytics'));
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
 const ShareModal = lazy(() => import('./components/ShareModal'));
+const MultiDeviceSyncModal = lazy(() => import('./components/MultiDeviceSyncModal'));
 
 function ModuleLoader() {
   return (
@@ -48,6 +60,9 @@ const VALID_TABS = ['dashboard', 'quotes', 'editor', 'preview', 'proforma', 'inv
 function getInitialTab() {
   if (typeof window !== 'undefined') {
     const hash = window.location.hash.replace('#', '').trim();
+    if (hash.startsWith('share=') || window.location.search.includes('share=')) {
+      return 'preview';
+    }
     if (VALID_TABS.includes(hash)) return hash;
     try {
       const savedTab = localStorage.getItem('kits_active_tab');
@@ -145,6 +160,9 @@ export default function App() {
 
   // Modals
   const [showSettings, setShowSettings] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [sharedBanner, setSharedBanner] = useState(null);
+  const [incomingSyncData, setIncomingSyncData] = useState(null);
   const [shareQuotation, setShareQuotation] = useState(null);
   const [previewReturnTab, setPreviewReturnTab] = useState(null);
   const [proformaInitialMode, setProformaInitialMode] = useState('cards');
@@ -166,11 +184,38 @@ export default function App() {
     return null;
   });
 
-  // Persist active tab to localStorage and URL hash
+  // Check incoming shared documents (#share=...) or database transfers (#sync=...)
+  useEffect(() => {
+    let mounted = true;
+    const processIncoming = async () => {
+      const res = await parseIncomingSharePayload();
+      if (!res || !mounted) return;
+
+      if (res.type === 'quote' && res.data) {
+        setCurrentQuotation(res.data);
+        setActiveTab('preview');
+        setSharedBanner({ doc: res.data, saved: false });
+      } else if (res.type === 'sync' && res.data) {
+        setIncomingSyncData(res.data);
+      }
+    };
+
+    processIncoming();
+    window.addEventListener('hashchange', processIncoming);
+    return () => {
+      mounted = false;
+      window.removeEventListener('hashchange', processIncoming);
+    };
+  }, []);
+
+  // Persist active tab to localStorage and URL hash (without overriding active share payloads)
   useEffect(() => {
     try {
       localStorage.setItem('kits_active_tab', activeTab);
-      if (typeof window !== 'undefined' && window.location.hash !== `#${activeTab}`) {
+      if (typeof window !== 'undefined' && 
+          !window.location.hash.includes('share=') && 
+          !window.location.hash.includes('sync=') &&
+          window.location.hash !== `#${activeTab}`) {
         window.history.replaceState(null, '', `#${activeTab}`);
       }
     } catch {
@@ -481,6 +526,31 @@ export default function App() {
     showToast('Document saved successfully!');
   }, [showToast]);
 
+  // Handle saving an incoming shared quotation directly into this laptop's permanent local database
+  const handleSaveSharedDocToLocal = useCallback(async () => {
+    if (!sharedBanner?.doc) return;
+    const doc = sharedBanner.doc;
+    await handleSaveQuotation(doc);
+    setSharedBanner(prev => prev ? { ...prev, saved: true } : null);
+    clearShareUrlHash();
+    showToast(`Quotation ${doc.quotationNumber} saved to this laptop's database!`);
+  }, [sharedBanner, handleSaveQuotation, showToast]);
+
+  // Handle incoming full-database sync package from another laptop
+  const handleConfirmIncomingSync = useCallback(async () => {
+    if (!incomingSyncData) return;
+    try {
+      await importDatabaseBackup(incomingSyncData);
+      await loadData();
+      const count = incomingSyncData.quotations?.length || 0;
+      setIncomingSyncData(null);
+      clearShareUrlHash();
+      showToast(`Successfully imported ${count} documents and clients from other laptop!`);
+    } catch (err) {
+      showToast('Import error: ' + err.message, 'error');
+    }
+  }, [incomingSyncData, loadData, showToast]);
+
   // Handlers for Clients
   const handleSaveClient = useCallback(async (clientData) => {
     const saved = await saveClient(clientData);
@@ -560,6 +630,7 @@ export default function App() {
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onOpenSettings={handleOpenSettings}
+          onOpenSync={() => setShowSyncModal(true)}
           companySettings={companySettings}
           onQuickAction={handleNewQuotation}
           onToggleSidebar={handleToggleSidebar}
@@ -624,8 +695,55 @@ export default function App() {
 
               {/* SCREEN 3: QUOTATION PREVIEW (Official KITS 2-Page Format) */}
               {activeTab === 'preview' && (
-                currentQuotation ? (
-                  <QuotationPreview
+                <>
+                  {sharedBanner && (
+                    <div className="no-print bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl border border-blue-700/60 flex flex-col sm:flex-row items-center justify-between gap-3 mb-5 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2.5 bg-blue-500/20 rounded-xl border border-blue-400/30 text-blue-300 shrink-0">
+                          <ExternalLink className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm text-white flex items-center space-x-2 flex-wrap">
+                            <span>Viewing Shared Document: {sharedBanner.doc?.quotationNumber}</span>
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
+                              Direct Device Link
+                            </span>
+                          </div>
+                          <p className="text-xs text-blue-200 mt-0.5">
+                            Sent by {sharedBanner.doc?.companyName || 'KITS ROBOTICS & AUTOMATION PVT.LTD.'} • Client: {sharedBanner.doc?.clientName || 'Valued Customer'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 shrink-0">
+                        {!sharedBanner.saved ? (
+                          <button
+                            type="button"
+                            onClick={handleSaveSharedDocToLocal}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>Save to this Laptop</span>
+                          </button>
+                        ) : (
+                          <span className="px-3.5 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold flex items-center space-x-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                            <span>Saved to this Laptop!</span>
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSharedBanner(null)}
+                          className="p-2 text-blue-300 hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                          title="Dismiss banner"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentQuotation ? (
+                    <QuotationPreview
                     quotation={currentQuotation}
                     companySettings={companySettings}
                     onBack={() => {
@@ -682,7 +800,8 @@ export default function App() {
                       </button>
                     </div>
                   </div>
-                )
+                )}
+                </>
               )}
 
               {/* SCREEN 4: PROFORMA INVOICES */}
@@ -823,6 +942,57 @@ export default function App() {
           companySettings={companySettings}
         />
       </Suspense>
+
+      {/* Multi-Device Sync Modal (Transfer data between laptops) */}
+      <Suspense fallback={null}>
+        <MultiDeviceSyncModal
+          isOpen={showSyncModal}
+          onClose={() => setShowSyncModal(false)}
+          onReloadData={loadData}
+          showToast={showToast}
+        />
+      </Suspense>
+
+      {/* Incoming Full-Data Transfer Confirmation Dialog */}
+      {incomingSyncData && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+              <Laptop className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-base font-bold text-slate-900">Import Data from Another Laptop?</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                You opened a transfer link sent from another laptop. It contains:
+              </p>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-left space-y-1 font-medium text-slate-700">
+                <div className="flex justify-between"><span>Quotations & Documents:</span> <span className="font-bold text-blue-600">{incomingSyncData.quotations?.length || 0}</span></div>
+                <div className="flex justify-between"><span>Clients Directory:</span> <span className="font-bold text-blue-600">{incomingSyncData.clients?.length || 0}</span></div>
+                <div className="flex justify-between"><span>Catalog Products:</span> <span className="font-bold text-blue-600">{incomingSyncData.products?.length || 0}</span></div>
+              </div>
+            </div>
+            <div className="flex space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIncomingSyncData(null);
+                  clearShareUrlHash();
+                }}
+                className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmIncomingSync}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-colors"
+              >
+                Import All Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sleek Bottom-Right Toast Notification */}
       {toast && (
