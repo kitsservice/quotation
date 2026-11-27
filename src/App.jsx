@@ -185,6 +185,17 @@ export default function App() {
     return null;
   });
 
+  // Toast notifications
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    const timer = setTimeout(() => {
+      setToast(prev => (prev?.message === message ? null : prev));
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Check incoming shared documents (#share=...) or database transfers (#sync=...)
   useEffect(() => {
     let mounted = true;
@@ -193,9 +204,42 @@ export default function App() {
       if (!res || !mounted) return;
 
       if (res.type === 'quote' && res.data) {
-        setCurrentQuotation(res.data);
+        const incomingDoc = res.data;
+        setCurrentQuotation(incomingDoc);
         setActiveTab('preview');
-        setSharedBanner({ doc: res.data, saved: false });
+        // Automatically save incoming shared document into local database so it is permanently visible in all views
+        try {
+          const saved = await saveQuotation(incomingDoc);
+          setQuotations(prev => {
+            const list = Array.isArray(prev) ? [...prev] : [];
+            const idx = list.findIndex(q => q && (q.id === saved.id || (q.quotationNumber && q.quotationNumber === saved.quotationNumber)));
+            if (idx >= 0) {
+              list[idx] = saved;
+            } else {
+              list.unshift(saved);
+            }
+            return list;
+          });
+          // Also automatically sync customer details
+          if (incomingDoc.clientName || incomingDoc.customerName) {
+            const clientPayload = {
+              companyName: incomingDoc.clientName || incomingDoc.customerName,
+              phone: incomingDoc.clientPhone || '',
+              email: incomingDoc.clientEmail || '',
+              contactPerson: incomingDoc.contactPerson || '',
+              address: incomingDoc.billingAddress || incomingDoc.shippingAddress || '',
+              gstin: incomingDoc.clientGstin || incomingDoc.customerGstin || '',
+              state: incomingDoc.clientState || 'Maharashtra',
+              stateCode: incomingDoc.clientStateCode || '27'
+            };
+            saveClient(clientPayload).catch(e => console.warn('Background client sync error:', e));
+          }
+          setSharedBanner({ doc: saved, saved: true });
+          showToast(`Document "${saved.quotationNumber || saved.challanNo}" auto-saved to your software!`);
+        } catch (err) {
+          console.warn('Auto-save error for shared doc:', err);
+          setSharedBanner({ doc: incomingDoc, saved: false });
+        }
       } else if (res.type === 'sync' && res.data) {
         setIncomingSyncData(res.data);
       }
@@ -207,7 +251,7 @@ export default function App() {
       mounted = false;
       window.removeEventListener('hashchange', processIncoming);
     };
-  }, []);
+  }, [showToast]);
 
   // Persist active tab to localStorage and URL hash (without overriding active share payloads)
   useEffect(() => {
@@ -262,17 +306,6 @@ export default function App() {
     }
   }, [proformaSourceQuote]);
 
-  // Toast notifications
-  const [toast, setToast] = useState(null);
-
-  const showToast = useCallback((message, type = 'success') => {
-    setToast({ message, type });
-    const timer = setTimeout(() => {
-      setToast(prev => (prev?.message === message ? null : prev));
-    }, 3500);
-    return () => clearTimeout(timer);
-  }, []);
-
   // Background Reload / Cloud Sync Handler
   const loadData = useCallback(async () => {
     try {
@@ -317,6 +350,25 @@ export default function App() {
       active = false;
     };
   }, []);
+
+  // Multi-laptop continuous synchronization: re-sync on window focus, online reconnect, or 20s background interval
+  useEffect(() => {
+    const handleSyncTrigger = () => {
+      loadData();
+    };
+    window.addEventListener('focus', handleSyncTrigger);
+    window.addEventListener('online', handleSyncTrigger);
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        loadData();
+      }
+    }, 20000);
+    return () => {
+      window.removeEventListener('focus', handleSyncTrigger);
+      window.removeEventListener('online', handleSyncTrigger);
+      clearInterval(timer);
+    };
+  }, [loadData]);
 
   // Single-pass O(N) categorization separating Quotations, Proforma, Tax Invoices, Delivery Challans, and Demo Challans
   const { quotationsOnly, proformaOnly, taxInvoicesOnly, challansOnly, demoChallansOnly } = useMemo(() => {

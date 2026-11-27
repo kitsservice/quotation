@@ -434,10 +434,24 @@ export async function fetchQuotations() {
           list.push({ id: docSnap.id, ...docSnap.data() });
         });
         if (list.length > 0) {
-          list.sort((a, b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date));
-          cachedQuotations = list;
-          safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, list);
-          return list;
+          // Merge local and cloud documents so no laptop's locally created documents are lost
+          const mergedMap = new Map();
+          (localList || []).forEach(item => {
+            if (item && item.id) mergedMap.set(item.id, item);
+          });
+          list.forEach(item => {
+            if (item && item.id) {
+              const local = mergedMap.get(item.id);
+              if (!local || new Date(item.updatedAt || 0) >= new Date(local.updatedAt || 0)) {
+                mergedMap.set(item.id, item);
+              }
+            }
+          });
+          const mergedList = Array.from(mergedMap.values());
+          mergedList.sort((a, b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date));
+          cachedQuotations = mergedList;
+          safeSetLocalStorage(LOCAL_STORAGE_KEYS.QUOTATIONS, mergedList);
+          return mergedList;
         }
       }
     } catch (err) {
@@ -511,10 +525,24 @@ export async function fetchClients() {
         const list = [];
         snap.forEach(d => list.push({ id: d.id, ...d.data() }));
         if (list.length > 0) {
-          list.sort((a, b) => (a.companyName || '').localeCompare(b.companyName || ''));
-          cachedClients = list;
-          safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, list);
-          return list;
+          // Merge local and cloud clients cleanly
+          const clientMap = new Map();
+          (localList || []).forEach(c => {
+            const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
+            if (key) clientMap.set(key, c);
+          });
+          list.forEach(c => {
+            const key = (c.companyName || c.name || c.id || '').trim().toLowerCase();
+            if (key) {
+              const local = clientMap.get(key);
+              clientMap.set(key, { ...(local || {}), ...c });
+            }
+          });
+          const merged = Array.from(clientMap.values());
+          merged.sort((a, b) => (a.companyName || '').localeCompare(b.companyName || ''));
+          cachedClients = merged;
+          safeSetLocalStorage(LOCAL_STORAGE_KEYS.CLIENTS, merged);
+          return merged;
         }
       }
     } catch (err) {
@@ -607,10 +635,24 @@ export async function fetchProducts() {
         const list = [];
         snap.forEach(d => list.push({ id: d.id, ...d.data() }));
         if (list.length > 0) {
-          list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-          cachedProducts = list;
-          safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, list);
-          return list;
+          // Merge local and cloud products cleanly
+          const prodMap = new Map();
+          (localList || []).forEach(p => {
+            const key = (p.id || p.name || '').trim().toLowerCase();
+            if (key) prodMap.set(key, p);
+          });
+          list.forEach(p => {
+            const key = (p.id || p.name || '').trim().toLowerCase();
+            if (key) {
+              const local = prodMap.get(key);
+              prodMap.set(key, { ...(local || {}), ...p });
+            }
+          });
+          const merged = Array.from(prodMap.values());
+          merged.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+          cachedProducts = merged;
+          safeSetLocalStorage(LOCAL_STORAGE_KEYS.PRODUCTS, merged);
+          return merged;
         }
       }
     } catch (err) {

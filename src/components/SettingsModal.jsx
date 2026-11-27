@@ -12,7 +12,8 @@ import {
   HardDrive,
   Copy,
   Check,
-  Laptop
+  Laptop,
+  ExternalLink
 } from 'lucide-react';
 import { 
   isFirebaseActive, 
@@ -112,12 +113,14 @@ function SettingsModal({
         setFirebaseStatus({
           active: true,
           testing: false,
+          notFound: false,
           message: 'Connected successfully to Firebase Firestore! Real-time cloud sync is active across all devices.'
         });
       } else {
         setFirebaseStatus({
           active: false,
           testing: false,
+          notFound: Boolean(result.notFound),
           message: result.error || 'Failed to connect. Check configuration values.'
         });
       }
@@ -650,10 +653,21 @@ function SettingsModal({
                 </div>
 
                 {firebaseStatus.message && (
-                  <div className={`p-3 rounded-xl text-xs font-medium ${
-                    firebaseStatus.active ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'
+                  <div className={`p-3.5 rounded-xl text-xs font-medium space-y-2 ${
+                    firebaseStatus.active ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
                   }`}>
-                    {firebaseStatus.message}
+                    <div>{firebaseStatus.message}</div>
+                    {firebaseStatus.notFound && (
+                      <a
+                        href={`https://console.firebase.google.com/project/${firebaseConfig.projectId || 'quotation-maker-1ac73'}/firestore`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition-colors"
+                      >
+                        <span>Open Firebase Console to Create Database (1-Click)</span>
+                        <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                      </a>
+                    )}
                   </div>
                 )}
 
