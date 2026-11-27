@@ -458,13 +458,19 @@ function DeliveryChallanManager({
       updatedAt: new Date().toISOString()
     };
 
-    // Strip Ref Invoice and Ref PO fields strictly for Demo Delivery Challans
+    // Strip Ref Invoice, Ref PO, and Transport Particulars strictly for Demo Delivery Challans
     if (isCurrentDemo) {
       challanDoc.linkedDocNumber = '';
       challanDoc.linkedDocId = '';
       challanDoc.linkedDocType = '';
       challanDoc.customerPoNo = '';
       challanDoc.customerPoDate = '';
+      challanDoc.transportMode = '';
+      challanDoc.vehicleNo = '';
+      challanDoc.transporterName = '';
+      challanDoc.lrNumber = '';
+      challanDoc.lrDate = '';
+      challanDoc.ewayBillNo = '';
     }
 
     if (!challanDoc.createdAt) {
@@ -702,12 +708,14 @@ function DeliveryChallanManager({
                             <span className="truncate max-w-[220px]">{ch.purpose || 'Installation & Commissioning'}</span>
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10.5px] text-slate-600">
-                          <span>Vehicle: <strong className="font-mono font-bold text-slate-800">{ch.vehicleNo || ch.transporterName || 'Self / Road'}</strong></span>
-                          {ch.lrNumber && (
-                            <span className="text-slate-500">LR: <strong className="font-mono">{ch.lrNumber}</strong></span>
-                          )}
-                        </div>
+                        {!isDemoModule && (
+                          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10.5px] text-slate-600">
+                            <span>Vehicle: <strong className="font-mono font-bold text-slate-800">{ch.vehicleNo || ch.transporterName || 'Self / Road'}</strong></span>
+                            {ch.lrNumber && (
+                              <span className="text-slate-500">LR: <strong className="font-mono">{ch.lrNumber}</strong></span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Center-Right Column (22%): Quantity, Items & Linked Reference */}
@@ -1179,82 +1187,84 @@ function DeliveryChallanManager({
             </div>
           </div>
 
-          {/* SECTION 3: Transport & Dispatch Particulars */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-3">
-              <Truck className="w-4 h-4 text-blue-600" />
-              <span>Transportation &amp; Dispatch Particulars</span>
+          {/* SECTION 3: Transport & Dispatch Particulars (Standard Delivery Challans only) */}
+          {!isCurrentDemo && (
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-3">
+                <Truck className="w-4 h-4 text-blue-600" />
+                <span>Transportation &amp; Dispatch Particulars</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Mode of Transport
+                  </label>
+                  <select
+                    value={formData.transportMode}
+                    onChange={(e) => setFormData({ ...formData, transportMode: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                  >
+                    {TRANSPORT_MODES.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Vehicle No. <span className="text-slate-400 font-normal">(if by road)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.vehicleNo}
+                    onChange={(e) => setFormData({ ...formData, vehicleNo: e.target.value.toUpperCase() })}
+                    placeholder=""
+                    className="w-full px-3 py-2 font-mono uppercase bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    Transporter Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.transporterName}
+                    onChange={(e) => setFormData({ ...formData, transporterName: e.target.value })}
+                    placeholder=""
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    LR / GR / Docket No.
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.lrNumber}
+                    onChange={(e) => setFormData({ ...formData, lrNumber: e.target.value })}
+                    placeholder=""
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    E-Way Bill No. <span className="text-slate-400 font-normal">(&gt;₹50k)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.ewayBillNo}
+                    onChange={(e) => setFormData({ ...formData, ewayBillNo: e.target.value })}
+                    placeholder=""
+                    className="w-full px-3 py-2 font-mono bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+              </div>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Mode of Transport
-                </label>
-                <select
-                  value={formData.transportMode}
-                  onChange={(e) => setFormData({ ...formData, transportMode: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
-                >
-                  {TRANSPORT_MODES.map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Vehicle No. <span className="text-slate-400 font-normal">(if by road)</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.vehicleNo}
-                  onChange={(e) => setFormData({ ...formData, vehicleNo: e.target.value.toUpperCase() })}
-                  placeholder=""
-                  className="w-full px-3 py-2 font-mono uppercase bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Transporter Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.transporterName}
-                  onChange={(e) => setFormData({ ...formData, transporterName: e.target.value })}
-                  placeholder=""
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  LR / GR / Docket No.
-                </label>
-                <input
-                  type="text"
-                  value={formData.lrNumber}
-                  onChange={(e) => setFormData({ ...formData, lrNumber: e.target.value })}
-                  placeholder=""
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  E-Way Bill No. <span className="text-slate-400 font-normal">(&gt;₹50k)</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.ewayBillNo}
-                  onChange={(e) => setFormData({ ...formData, ewayBillNo: e.target.value })}
-                  placeholder=""
-                  className="w-full px-3 py-2 font-mono bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-500"
-                />
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* SECTION 4: Line Items (Consignment Description & Assessable Values) */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
@@ -1564,43 +1574,62 @@ function DeliveryChallanManager({
                     </div>
                     <div className="grid grid-cols-[130px_1fr]">
                       <span className="font-bold text-slate-900">Nature of Removal:</span>
-                      <span className="font-bold text-blue-900">{selectedChallan.purpose || 'Installation & Commissioning'}</span>
+                      <span className="font-bold text-blue-900">{selectedChallan.purpose || (isSelectedDemo ? 'Demonstration / Exhibition' : 'Installation & Commissioning')}</span>
                     </div>
                   </div>
 
-                  {/* Right Column: Transport & Ref Metadata */}
+                  {/* Right Column: Transport & Ref Metadata for Standard, or Demo Status for Demo Challan */}
                   <div className="space-y-1">
-                    <div className="grid grid-cols-[130px_1fr]">
-                      <span className="font-bold text-slate-900">Mode of Transport:</span>
-                      <span className="font-semibold text-slate-950">{selectedChallan.transportMode || 'Road'}</span>
-                    </div>
-                    <div className="grid grid-cols-[130px_1fr]">
-                      <span className="font-bold text-slate-900">Vehicle No.:</span>
-                      <span className="font-mono font-bold text-slate-950">{selectedChallan.vehicleNo || 'Self / Road'}</span>
-                    </div>
-                    <div className="grid grid-cols-[130px_1fr]">
-                      <span className="font-bold text-slate-900">LR / GR No. &amp; Date:</span>
-                      <span className="text-slate-800">
-                        {selectedChallan.lrNumber ? `${selectedChallan.lrNumber} (${formatDate(selectedChallan.lrDate || selectedChallan.date)})` : 'Hand Delivery'}
-                      </span>
-                    </div>
-                    {selectedChallan.ewayBillNo && (
-                      <div className="grid grid-cols-[130px_1fr]">
-                        <span className="font-bold text-slate-900">E-Way Bill No.:</span>
-                        <span className="font-mono font-bold text-slate-950">{selectedChallan.ewayBillNo}</span>
-                      </div>
-                    )}
-                    {!isSelectedDemo && selectedChallan.linkedDocNumber && (
-                      <div className="grid grid-cols-[130px_1fr]">
-                        <span className="font-bold text-slate-900">Ref Final Invoice:</span>
-                        <span className="font-mono font-bold text-slate-950">{selectedChallan.linkedDocNumber}</span>
-                      </div>
-                    )}
-                    {!isSelectedDemo && selectedChallan.customerPoNo && (
-                      <div className="grid grid-cols-[130px_1fr]">
-                        <span className="font-bold text-slate-900">Ref PO / Order No.:</span>
-                        <span className="text-slate-800">{selectedChallan.customerPoNo}</span>
-                      </div>
+                    {isSelectedDemo ? (
+                      <>
+                        <div className="grid grid-cols-[130px_1fr]">
+                          <span className="font-bold text-slate-900">Consignment Status:</span>
+                          <span className="font-semibold text-slate-950">{selectedChallan.status || 'Demo Dispatched'}</span>
+                        </div>
+                        <div className="grid grid-cols-[130px_1fr]">
+                          <span className="font-bold text-slate-900">Consignment Type:</span>
+                          <span className="font-bold text-amber-900">Non-Commercial Trial Goods</span>
+                        </div>
+                        <div className="grid grid-cols-[130px_1fr]">
+                          <span className="font-bold text-slate-900">Return Policy:</span>
+                          <span className="text-slate-800">Returnable Equipment</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-[130px_1fr]">
+                          <span className="font-bold text-slate-900">Mode of Transport:</span>
+                          <span className="font-semibold text-slate-950">{selectedChallan.transportMode || 'Road'}</span>
+                        </div>
+                        <div className="grid grid-cols-[130px_1fr]">
+                          <span className="font-bold text-slate-900">Vehicle No.:</span>
+                          <span className="font-mono font-bold text-slate-950">{selectedChallan.vehicleNo || 'Self / Road'}</span>
+                        </div>
+                        <div className="grid grid-cols-[130px_1fr]">
+                          <span className="font-bold text-slate-900">LR / GR No. &amp; Date:</span>
+                          <span className="text-slate-800">
+                            {selectedChallan.lrNumber ? `${selectedChallan.lrNumber} (${formatDate(selectedChallan.lrDate || selectedChallan.date)})` : 'Hand Delivery'}
+                          </span>
+                        </div>
+                        {selectedChallan.ewayBillNo && (
+                          <div className="grid grid-cols-[130px_1fr]">
+                            <span className="font-bold text-slate-900">E-Way Bill No.:</span>
+                            <span className="font-mono font-bold text-slate-950">{selectedChallan.ewayBillNo}</span>
+                          </div>
+                        )}
+                        {selectedChallan.linkedDocNumber && (
+                          <div className="grid grid-cols-[130px_1fr]">
+                            <span className="font-bold text-slate-900">Ref Final Invoice:</span>
+                            <span className="font-mono font-bold text-slate-950">{selectedChallan.linkedDocNumber}</span>
+                          </div>
+                        )}
+                        {selectedChallan.customerPoNo && (
+                          <div className="grid grid-cols-[130px_1fr]">
+                            <span className="font-bold text-slate-900">Ref PO / Order No.:</span>
+                            <span className="text-slate-800">{selectedChallan.customerPoNo}</span>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
