@@ -15,7 +15,8 @@ import {
   MapPin, 
   Copy,
   Receipt,
-  Package
+  Package,
+  Share2
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatNumber } from '../utils/formatters';
 import { numberToIndianWords } from '../utils/numberToWords';
@@ -23,6 +24,7 @@ import { generateNextDeliveryChallanNumber, generateNextDemoChallanNumber } from
 import { exportToPdf, printDocument } from '../services/pdfGenerator';
 import { KitsDocumentHeader, KitsDocumentFooter } from './KitsHeaderFooter';
 import DocumentConvertMenu from './DocumentConvertMenu';
+export { default as PrintableChallanSheet } from './PrintableChallanSheet';
 
 const REMOVAL_PURPOSES = [
   'Installation & Commissioning at Site',
@@ -166,7 +168,8 @@ function DeliveryChallanManager({
   onDeleteChallan,
   onNavigateTab,
   onViewQuotation,
-  onConvertDocument
+  onConvertDocument,
+  onShareChallan
 }) {
   const [viewMode, setViewMode] = useState(() => initialSourceDoc ? 'create' : (initialMode || 'list')); // 'list' | 'create' | 'preview'
   const [selectedChallan, setSelectedChallan] = useState(null);
@@ -827,6 +830,17 @@ function DeliveryChallanManager({
                               variant="icon"
                               align="right"
                             />
+                          )}
+
+                          {onShareChallan && (
+                            <button
+                              type="button"
+                              onClick={() => onShareChallan(ch)}
+                              title="Share Delivery Challan (PDF / WhatsApp)"
+                              className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Share2 className="w-3.5 h-3.5" />
+                            </button>
                           )}
 
                           <button
@@ -1586,8 +1600,8 @@ function DeliveryChallanManager({
               ))}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center flex-wrap gap-2">
+            {/* Action Buttons - Strict single row */}
+            <div className="flex items-center space-x-1.5 shrink-0 flex-nowrap">
               <button
                 type="button"
                 onClick={() => printDocument()}
@@ -1607,6 +1621,17 @@ function DeliveryChallanManager({
                 <Download className="w-3.5 h-3.5" />
                 <span>{isExporting ? 'Generating PDF...' : 'Download PDF'}</span>
               </button>
+              {onShareChallan && (
+                <button
+                  type="button"
+                  onClick={() => onShareChallan(selectedChallan)}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center space-x-1.5 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
+                  title="Share Delivery Challan (PDF / WhatsApp)"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Share</span>
+                </button>
+              )}
               {onConvertDocument && (
                 <DocumentConvertMenu
                   document={selectedChallan}

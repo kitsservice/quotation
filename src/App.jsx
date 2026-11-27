@@ -1028,6 +1028,7 @@ export default function App() {
                   onNavigateTab={(tab) => setActiveTab(tab)}
                   onViewQuotation={handleViewQuotation}
                   onConvertDocument={handleConvertDocument}
+                  onShareChallan={(ch) => setShareQuotation(ch)}
                 />
               )}
 
@@ -1053,6 +1054,7 @@ export default function App() {
                   onNavigateTab={(tab) => setActiveTab(tab)}
                   onViewQuotation={handleViewQuotation}
                   onConvertDocument={handleConvertDocument}
+                  onShareChallan={(ch) => setShareQuotation(ch)}
                 />
               )}
 

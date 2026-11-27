@@ -15,16 +15,44 @@ function loadPdfLibraries() {
   return pdfLibPromise;
 }
 
-export async function exportToPdf(containerId = 'printable-quotation', filename = 'KITS_Document.pdf') {
-  const container = document.getElementById(containerId);
+/**
+ * Resolves the printable DOM container element with smart fallbacks
+ */
+function resolveContainerElement(containerId = 'printable-quotation') {
+  if (typeof document === 'undefined') return null;
+
+  // Direct ID match
+  let container = document.getElementById(containerId);
+  if (container) return container;
+
+  // Smart fallback IDs if primary ID is not currently in the DOM
+  const candidates = [
+    'share-modal-printable',
+    'printable-quotation',
+    'printable-delivery-challan'
+  ];
+
+  for (const id of candidates) {
+    container = document.getElementById(id);
+    if (container) return container;
+  }
+
+  return null;
+}
+
+/**
+ * Generates the jsPDF instance by capturing the container sheets
+ */
+export async function generatePdfDoc(containerId = 'printable-quotation') {
+  const container = resolveContainerElement(containerId);
   if (!container) {
-    throw new Error('Printable container element was not found.');
+    throw new Error(`Printable container element was not found (attempted: ${containerId}).`);
   }
 
   // Load heavy libraries dynamically on demand with cached module promise
   const [{ default: jsPDF }, { default: html2canvas }] = await loadPdfLibraries();
 
-  // Check if multiple explicit A4 pages exist (.a4-sheet)
+  // Check if explicit A4 pages exist (.a4-sheet)
   const pageElements = container.querySelectorAll('.a4-sheet');
 
   const pdf = new jsPDF({
@@ -91,12 +119,39 @@ export async function exportToPdf(containerId = 'printable-quotation', filename 
       }
     }
 
-    pdf.save(filename);
-    return true;
+    return pdf;
   } catch (err) {
     console.error('Error during PDF rendering:', err);
     throw err;
   }
+}
+
+/**
+ * Returns a PDF Blob of the document
+ */
+export async function generatePdfBlob(containerId = 'printable-quotation') {
+  const pdf = await generatePdfDoc(containerId);
+  return pdf.output('blob');
+}
+
+/**
+ * Returns a standard browser File object for Web Share API / email attachments
+ */
+export async function generatePdfFile(containerId = 'printable-quotation', filename = 'KITS_Document.pdf') {
+  const blob = await generatePdfBlob(containerId);
+  return new File([blob], filename, {
+    type: 'application/pdf',
+    lastModified: Date.now()
+  });
+}
+
+/**
+ * Exports directly to file and triggers browser download
+ */
+export async function exportToPdf(containerId = 'printable-quotation', filename = 'KITS_Document.pdf') {
+  const pdf = await generatePdfDoc(containerId);
+  pdf.save(filename);
+  return true;
 }
 
 export function printDocument() {

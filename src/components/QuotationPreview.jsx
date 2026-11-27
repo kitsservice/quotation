@@ -13,6 +13,7 @@ import { exportToPdf, printDocument } from '../services/pdfGenerator';
 import { KitsDocumentHeader, KitsDocumentFooter } from './KitsHeaderFooter';
 import { HARDWARE_DEFAULT_EXCLUSIONS, SOFTWARE_DEFAULT_EXCLUSIONS, SOFTWARE_DEFAULT_TERMS } from '../utils/gstHelper';
 import DocumentConvertMenu from './DocumentConvertMenu';
+import PrintableChallanSheet from './PrintableChallanSheet';
 
 const parsedTermsCache = new Map();
 
@@ -158,22 +159,29 @@ function QuotationPreview({
   onEdit,
   onShare,
   onConvertToProforma,
-  onConvertDocument
+  onConvertDocument,
+  isPrintOnly = false,
+  containerId = 'printable-quotation'
 }) {
   const [isExporting, setIsExporting] = useState(false);
   const printAreaRef = useRef(null);
 
   const safeQuotation = quotation || {};
-  const isTaxInvoiceDoc = safeQuotation.documentType === 'Tax Invoice' || safeQuotation.documentType === 'Final Invoice' || safeQuotation.isTaxInvoice;
-  const isProformaDoc = !isTaxInvoiceDoc && (safeQuotation.documentType === 'Proforma Invoice' || safeQuotation.isProforma);
+  const isDemoChallanDoc = safeQuotation.documentType === 'Demo Challan' || safeQuotation.isDemoChallan || safeQuotation.type === 'demo-challan';
+  const isDeliveryChallanDoc = isDemoChallanDoc || safeQuotation.documentType === 'Delivery Challan' || safeQuotation.isDeliveryChallan || safeQuotation.type === 'challan';
+  const isTaxInvoiceDoc = !isDeliveryChallanDoc && (safeQuotation.documentType === 'Tax Invoice' || safeQuotation.documentType === 'Final Invoice' || safeQuotation.isTaxInvoice);
+  const isProformaDoc = !isDeliveryChallanDoc && !isTaxInvoiceDoc && (safeQuotation.documentType === 'Proforma Invoice' || safeQuotation.isProforma);
 
   const handleDownloadPdf = async () => {
     setIsExporting(true);
     try {
-      const prefix = isTaxInvoiceDoc ? 'KITS_Final_Invoice_' : (isProformaDoc ? 'KITS_Proforma_' : 'KITS_Quotation_');
-      const sanitizedNumber = (safeQuotation.quotationNumber || 'Document').replace(/[/\\]/g, '_');
+      const prefix = isDeliveryChallanDoc
+        ? (isDemoChallanDoc ? 'KITS_Demo_Challan_' : 'KITS_Delivery_Challan_')
+        : (isTaxInvoiceDoc ? 'KITS_Final_Invoice_' : (isProformaDoc ? 'KITS_Proforma_' : 'KITS_Quotation_'));
+      const rawNum = safeQuotation.challanNo || safeQuotation.invoiceNo || safeQuotation.quotationNumber || 'Document';
+      const sanitizedNumber = rawNum.replace(/[/\\]/g, '_');
       const filename = `${prefix}${sanitizedNumber}.pdf`;
-      await exportToPdf('printable-quotation', filename);
+      await exportToPdf(containerId || 'printable-quotation', filename);
     } catch (err) {
       console.error('PDF export failed:', err);
       alert('Error generating PDF: ' + err.message);
@@ -281,103 +289,111 @@ function QuotationPreview({
     : (isSoftware ? SOFTWARE_DEFAULT_EXCLUSIONS : HARDWARE_DEFAULT_EXCLUSIONS);
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className={isPrintOnly ? "w-full" : "space-y-6 pb-20"}>
       
-      {/* Top Action Toolbar (Hidden during print) */}
-      <div className="no-print bg-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 w-full max-w-6xl mx-auto">
-        <div className="flex items-center space-x-3 min-w-0">
-          <button
-            onClick={onBack}
-            className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-200/80 shrink-0"
-            title="Back to Previous View"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
-          </button>
-          <div className="min-w-0">
-            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-              <span className="font-bold text-slate-900 font-mono text-sm sm:text-base whitespace-nowrap">
-                {safeQuotation.quotationNumber || 'Document'}
-              </span>
-              <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap">
-                {isTaxInvoiceDoc ? 'FINAL INV' : (safeQuotation.revision || (isProformaDoc ? 'PI' : 'Rev 0'))}
-              </span>
-              <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-emerald-200 whitespace-nowrap">
-                {isTaxInvoiceDoc ? 'Final Invoice Issued' : (isProformaDoc ? 'Proforma Issued' : (safeQuotation.status || 'Approved'))}
-              </span>
+      {/* Top Action Toolbar (Hidden during print or print-only mode) */}
+      {!isPrintOnly && (
+        <div className="no-print bg-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 w-full max-w-6xl mx-auto">
+          <div className="flex items-center space-x-3 min-w-0">
+            <button
+              onClick={onBack}
+              className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-200/80 shrink-0"
+              title="Back to Previous View"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                <span className="font-bold text-slate-900 font-mono text-sm sm:text-base whitespace-nowrap">
+                  {safeQuotation.challanNo || safeQuotation.invoiceNo || safeQuotation.quotationNumber || 'Document'}
+                </span>
+                <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap">
+                  {isDeliveryChallanDoc ? (isDemoChallanDoc ? 'DEMO DC' : 'DC') : (isTaxInvoiceDoc ? 'FINAL INV' : (safeQuotation.revision || (isProformaDoc ? 'PI' : 'Rev 0')))}
+                </span>
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-emerald-200 whitespace-nowrap">
+                  {isDeliveryChallanDoc ? (isDemoChallanDoc ? 'Demo Consignment' : 'Delivery Challan Issued') : (isTaxInvoiceDoc ? 'Final Invoice Issued' : (isProformaDoc ? 'Proforma Issued' : (safeQuotation.status || 'Approved')))}
+                </span>
+              </div>
+              {safeQuotation.clientName && (
+                <p className="text-[11px] text-slate-500 truncate max-w-xs sm:max-w-sm md:max-w-md mt-0.5">
+                  {safeQuotation.clientName} {safeQuotation.subject ? `• ${safeQuotation.subject}` : ''}
+                </p>
+              )}
             </div>
-            {safeQuotation.clientName && (
-              <p className="text-[11px] text-slate-500 truncate max-w-xs sm:max-w-sm md:max-w-md mt-0.5">
-                {safeQuotation.clientName} {safeQuotation.subject ? `• ${safeQuotation.subject}` : ''}
-              </p>
+          </div>
+
+          {/* Compact Action Buttons - Strictly in One Single Row */}
+          <div className="flex items-center flex-nowrap gap-1.5 sm:gap-2 shrink-0 overflow-x-auto scrollbar-none py-0.5">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 whitespace-nowrap"
+              title="Print Document"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-600" />
+              <span>Print</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={isExporting}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
+              title="Download Official PDF"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{isExporting ? 'Generating...' : 'Download PDF'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onShare(safeQuotation)}
+              className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-xs cursor-pointer shrink-0 whitespace-nowrap"
+              title="Share via WhatsApp or Email"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Share</span>
+            </button>
+
+            {(onConvertDocument || onConvertToProforma) && (
+              <DocumentConvertMenu
+                document={safeQuotation}
+                onConvert={(doc, type) => {
+                  if (onConvertDocument) {
+                    onConvertDocument(doc, type);
+                  } else if (onConvertToProforma) {
+                    onConvertToProforma(doc);
+                  }
+                }}
+                variant="button"
+                buttonClassName="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
+              />
             )}
+
+            <button
+              type="button"
+              onClick={() => onEdit(safeQuotation)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 whitespace-nowrap"
+              title="Edit Document"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Edit</span>
+            </button>
           </div>
         </div>
-
-        {/* Compact Action Buttons - Strictly in One Single Row */}
-        <div className="flex items-center flex-nowrap gap-1.5 sm:gap-2 shrink-0 overflow-x-auto scrollbar-none py-0.5">
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 whitespace-nowrap"
-            title="Print Document"
-          >
-            <Printer className="w-3.5 h-3.5 text-slate-600" />
-            <span>Print</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDownloadPdf}
-            disabled={isExporting}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
-            title="Download Official PDF"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>{isExporting ? 'Generating...' : 'Download PDF'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onShare(safeQuotation)}
-            className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-xs cursor-pointer shrink-0 whitespace-nowrap"
-            title="Share via WhatsApp or Email"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>Share</span>
-          </button>
-
-          {(onConvertDocument || onConvertToProforma) && (
-            <DocumentConvertMenu
-              document={safeQuotation}
-              onConvert={(doc, type) => {
-                if (onConvertDocument) {
-                  onConvertDocument(doc, type);
-                } else if (onConvertToProforma) {
-                  onConvertToProforma(doc);
-                }
-              }}
-              variant="button"
-              buttonClassName="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
-            />
-          )}
-
-          <button
-            type="button"
-            onClick={() => onEdit(safeQuotation)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 whitespace-nowrap"
-            title="Edit Document"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Edit</span>
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Main Printable Sheets Container */}
-      <div id="printable-quotation" ref={printAreaRef} className="w-full overflow-x-auto py-2 flex flex-col items-center">
+      <div id={containerId || "printable-quotation"} ref={printAreaRef} className="w-full overflow-x-auto py-2 flex flex-col items-center">
         
-        {isTaxInvoiceDoc ? (
+        {isDeliveryChallanDoc ? (
+          <PrintableChallanSheet
+            challan={safeQuotation}
+            companySettings={companySettings}
+            isDemo={isDemoChallanDoc}
+          />
+        ) : isTaxInvoiceDoc ? (
           /* ============================================================== */
           /* FINAL TAX INVOICE: 2-PAGE OFFICIAL KITS STANDARD               */
           /* ============================================================== */
